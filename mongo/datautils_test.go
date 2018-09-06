@@ -95,4 +95,36 @@ var _ = Describe("MongoUtils", func() {
 			Expect(doc.Lookup("num").Int32()).To(Equal(t.Num))
 		})
 	})
+
+	Describe("copyInterface", func() {
+		Context("pointer interface is provided", func() {
+			It("should create copy of provided pointer interface", func() {
+				type testStruct struct {
+					a string
+				}
+
+				ts := &testStruct{
+					a: "original",
+				}
+				copyts := copyInterface(ts).(*testStruct)
+				copyts.a = "changed"
+
+				Expect(ts.a).ToNot(Equal(copyts.a))
+			})
+
+			It("should create copy of provided non-pointer interface", func() {
+				type testStruct struct {
+					a string
+				}
+
+				ts := testStruct{
+					a: "original",
+				}
+				copyts := copyInterface(ts).(*testStruct)
+				copyts.a = "changed"
+
+				Expect(ts.a).ToNot(Equal(copyts.a))
+			})
+		})
+	})
 })

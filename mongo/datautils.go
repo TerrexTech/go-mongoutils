@@ -2,6 +2,7 @@ package mongo
 
 import (
 	ctx "context"
+	"reflect"
 	"time"
 
 	"github.com/mongodb/mongo-go-driver/bson"
@@ -38,4 +39,15 @@ func toBSON(data interface{}) (*bson.Document, error) {
 		}
 	}
 	return doc, nil
+}
+
+// copyInterface creates a copy of a member of type:
+//  interface{}
+func copyInterface(intf interface{}) interface{} {
+	intfType := reflect.TypeOf(intf)
+	if intfType.Kind() == reflect.Ptr {
+		// De-reference if its pointer
+		intfType = reflect.TypeOf(intf).Elem()
+	}
+	return reflect.New(intfType).Interface()
 }
