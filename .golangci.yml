@@ -1,0 +1,17 @@
+linters:
+  enable:
+    - dupl
+    - gocyclo
+    - maligned
+    - misspell
+    - lll
+    - unparam
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+  lll:
+    line-length: 80
+  unparam:
+    algo: rta
