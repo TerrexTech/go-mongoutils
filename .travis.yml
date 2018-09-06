@@ -1,0 +1,68 @@
+dist: trusty
+
+services:
+  - docker
+
+language: go
+
+go:
+  - "1.11"
+
+branches:
+  except:
+    - staging.tmp
+
+env:
+  global:
+    - DEP_VERSION="0.5.0"
+    - DOCKER_COMPOSE_VERSION=1.22.0
+
+before_install:
+  # Download dep binary to $GOPATH/bin
+  - curl -L -s https://github.com/golang/dep/releases/download/v${DEP_VERSION}/dep-linux-amd64 -o $GOPATH/bin/dep
+  - chmod +x $GOPATH/bin/dep
+
+  # Docker-Compose
+  - sudo rm /usr/local/bin/docker-compose
+  - curl -L https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-`uname
+    -s`-`uname -m` > docker-compose
+  - chmod +x docker-compose
+  - sudo mv docker-compose /usr/local/bin
+
+addons:
+  apt:
+    packages:
+      - docker-ce
+
+install:
+  - dep ensure -v
+
+before_script:
+  - chmod +x ./test/setup_mongo.sh
+  - ./test/setup_mongo.sh
+
+script:
+  - go test -v -race ./...
+  - go run ./examples/example.go
+
+after_script:
+  - docker-compose -f ./test/docker-compose.yaml down --volumes --rmi local
+
+before_deploy:
+  - export GIT_BRANCH=${TRAVIS_PULL_REQUEST_BRANCH:-$TRAVIS_BRANCH}
+  # Append "-release" to branch-name if its a tagged-commit.
+  # (Tagged commits should have naming-convention: "<tag-name>-release")
+  - export GIT_BRANCH=$(
+      if [[ -z "${TRAVIS_TAG}" ]];
+        then echo "-release";
+        else echo "";
+      fi
+    )
+
+deploy:
+  provider: script
+  skip_cleanup: true
+  script: curl -sL https://git.io/fAzLc | bash
+  on:
+    all_branches: true
+    tags: true
