@@ -49,7 +49,9 @@ type Collection struct {
 // this is only intended to prevent unexpected behavior.
 func (c *Collection) verifyDataSchema(data interface{}) error {
 	dataType := reflect.TypeOf(data).String()
-	// Add "*" if absent because the SchemaStruct we stored is a pointer
+	// Add "*" if absent because the SchemaStruct we stored is a pointer,
+	// but its not necessary that data (to validate) must also be a pointer
+	// (for example, data-insertion can be used with and without a pointer),
 	if !strings.HasPrefix(dataType, "*") {
 		dataType = "*" + dataType
 	}
@@ -57,7 +59,7 @@ func (c *Collection) verifyDataSchema(data interface{}) error {
 
 	if dataType != expectedType {
 		return errors.New(
-			"Mismatch between provided data and expected schema." +
+			"Mismatch between provided data-schema and expected schema. " +
 				"Consider changing collection.SchemaStruct if required.",
 		)
 	}
@@ -82,9 +84,9 @@ func (c *Collection) DeleteMany(filter interface{}) (*mgo.DeleteResult, error) {
 
 	result, err := c.collection.DeleteMany(ctx, doc)
 	if err != nil {
-		cancel()
+		err = errors.Wrap(err, "Deletion Error")
 	}
-	return result, errors.Wrap(err, "Deletion Error")
+	return result, err
 }
 
 // Find finds the documents matching a model.
@@ -151,9 +153,39 @@ func (c *Collection) InsertOne(data interface{}) (*mgo.InsertOneResult, error) {
 
 	result, err := c.collection.InsertOne(ctx, doc)
 	if err != nil {
-		cancel()
+		err = errors.Wrap(err, "InsertOne Error")
 	}
-	return result, errors.Wrap(err, "InsertOne Error")
+	return result, err
+}
+
+// InsertMany inserts the provided data into Collection.
+// Currently, batching is not implemented for this operation.
+// Because of this, extremely large sets of documents will not fit into a
+// single BSON document to be sent to the server, so the operation will fail.
+// The data must match the schema provided at the time of Collection-
+// creation. Update the Collection.SchemaStruct if new schema is required.
+func (c *Collection) InsertMany(
+	data []interface{},
+) (*[]mgo.InsertOneResult, error) {
+	isValidType := verifyArrayOrSliceType(data)
+	if !isValidType {
+		return nil, errors.New(
+			"InsertMany - Data must be Array or Slice (pointer or non-pointer)",
+		)
+	}
+
+	insertResults := []mgo.InsertOneResult{}
+	for i, d := range data {
+		result, err := c.InsertOne(d)
+		if err != nil {
+			return nil, errors.Wrapf(
+				err,
+				"InsertMany - Error Inserting Data at Index: %d", i,
+			)
+		}
+		insertResults = append(insertResults, *result)
+	}
+	return &insertResults, nil
 }
 
 // UpdateMany updates multiple documents in the collection.
@@ -179,9 +211,9 @@ func (c *Collection) UpdateMany(
 
 	result, err := c.collection.UpdateMany(ctx, filterDoc, updateDoc)
 	if err != nil {
-		cancel()
+		err = errors.Wrap(err, "UpdateMany Error")
 	}
-	return result, errors.Wrap(err, "UpdateMany Error")
+	return result, err
 }
 
 // Aggregate runs an aggregation framework pipeline

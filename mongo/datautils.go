@@ -51,3 +51,15 @@ func copyInterface(intf interface{}) interface{} {
 	}
 	return reflect.New(intfType).Interface()
 }
+
+// verifyArrayOrSliceType returns true if the passed interface{}
+// is an array or slice (can also be a pointer to an array or slice).
+func verifyArrayOrSliceType(intf interface{}) bool {
+	kind := reflect.TypeOf(intf).Kind()
+	// Deref if its a pointer
+	if kind == reflect.Ptr {
+		kind = reflect.TypeOf(intf).Elem().Kind()
+	}
+	isValid := kind == reflect.Array || kind == reflect.Slice
+	return isValid
+}

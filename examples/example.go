@@ -21,7 +21,12 @@ type item struct {
 }
 
 func main() {
-	collection, err := createCollection()
+	client, err := createClient()
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	collection, err := createCollection(client)
 	if err != nil {
 		log.Fatalln(err, collection)
 	}
@@ -61,8 +66,8 @@ func main() {
 	aggregatePipeline(collection)
 }
 
-// createCollection demonstrates creating the collection and the associated database.
-func createCollection() (*mongo.Collection, error) {
+// createClient creates a MongoDB-Client.
+func createClient() (*mongo.Client, error) {
 	// Would ideally set these config-params as environment vars
 	config := mongo.ClientConfig{
 		Hosts:               []string{"localhost:27017"},
@@ -73,10 +78,12 @@ func createCollection() (*mongo.Collection, error) {
 
 	// ====> MongoDB Client
 	client, err := mongo.NewClient(config)
-	if err != nil {
-		log.Fatalln(err)
-	}
+	// Let the parent functions handle error, always -.-
+	return client, err
+}
 
+// createCollection demonstrates creating the collection and the associated database.
+func createCollection(client *mongo.Client) (*mongo.Collection, error) {
 	// ====> Collection Configuration
 	conn := &mongo.ConnectionConfig{
 		Client:  client,

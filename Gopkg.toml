@@ -34,7 +34,7 @@
 
 [[constraint]]
   name = "github.com/TerrexTech/go-commonutils"
-  version = "1.0.0"
+  version = "2.0.0"
 
 [[constraint]]
   name = "github.com/onsi/ginkgo"

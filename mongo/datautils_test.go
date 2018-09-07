@@ -127,4 +127,56 @@ var _ = Describe("MongoUtils", func() {
 			})
 		})
 	})
+
+	Describe("verifyArrayOrSliceType", func() {
+		Context("slice is passed", func() {
+			It("should return true", func() {
+				testSlice := []int{1, 2, 4, 5}
+				isSlice := verifyArrayOrSliceType(testSlice)
+				Expect(isSlice).To(BeTrue())
+			})
+		})
+
+		Context("pointer to slice is passed", func() {
+			It("should return true", func() {
+				testSlice := &[]int{1, 2, 4, 5}
+				isSlice := verifyArrayOrSliceType(testSlice)
+				Expect(isSlice).To(BeTrue())
+			})
+		})
+
+		Context("array is passed", func() {
+			It("should return true", func() {
+				testArray := [4]int{1, 2, 4, 5}
+				isArray := verifyArrayOrSliceType(testArray)
+				Expect(isArray).To(BeTrue())
+			})
+		})
+
+		Context("pointer to array is passed", func() {
+			It("should return true", func() {
+				testArray := &[4]int{1, 2, 4, 5}
+				isArray := verifyArrayOrSliceType(testArray)
+				Expect(isArray).To(BeTrue())
+			})
+		})
+
+		Context("non array or slice is passed", func() {
+			It("should return false", func() {
+				testInt := 4
+				isValid := verifyArrayOrSliceType(testInt)
+				Expect(isValid).To(BeFalse())
+
+				testString := "test"
+				isValid = verifyArrayOrSliceType(testString)
+				Expect(isValid).To(BeFalse())
+
+				testMap := map[string]interface{}{
+					"test": 1,
+				}
+				isValid = verifyArrayOrSliceType(testMap)
+				Expect(isValid).To(BeFalse())
+			})
+		})
+	})
 })
