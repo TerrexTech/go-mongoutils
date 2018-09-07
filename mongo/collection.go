@@ -4,6 +4,8 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/mongodb/mongo-go-driver/mongo/findopt"
+
 	"github.com/pkg/errors"
 
 	mgo "github.com/mongodb/mongo-go-driver/mongo"
@@ -88,7 +90,10 @@ func (c *Collection) DeleteMany(filter interface{}) (*mgo.DeleteResult, error) {
 // Find finds the documents matching a model.
 // The filter-data must match the schema provided at the time of Collection-
 // creation. Update the Collection.SchemaStruct if new schema is required.
-func (c *Collection) Find(filter interface{}) ([]interface{}, error) {
+func (c *Collection) Find(
+	filter interface{},
+	opts ...findopt.Find,
+) ([]interface{}, error) {
 	err := c.verifyDataSchema(filter)
 	if err != nil {
 		return nil, errors.Wrap(err, "Find - Schema Verification Error:")
@@ -99,7 +104,7 @@ func (c *Collection) Find(filter interface{}) ([]interface{}, error) {
 	}
 
 	findCtx, findCancel := newTimeoutContext(c.Connection.Timeout)
-	cur, err := c.collection.Find(findCtx, doc)
+	cur, err := c.collection.Find(findCtx, doc, opts...)
 	if err != nil {
 		findCancel()
 		return nil, errors.Wrap(err, "Find Error:")
@@ -122,7 +127,10 @@ func (c *Collection) Find(filter interface{}) ([]interface{}, error) {
 	cursorCloseCtx, cursorCloseCancel := newTimeoutContext(c.Connection.Timeout)
 	defer cursorCloseCancel()
 	err = cur.Close(cursorCloseCtx)
-	return items, errors.Wrap(err, "Find - Error Closing Cursor:")
+	if err != nil {
+		err = errors.Wrap(err, "Find - Error Closing Cursor:")
+	}
+	return items, err
 }
 
 // InsertOne inserts the provided data into Collection.

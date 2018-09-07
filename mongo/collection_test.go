@@ -4,6 +4,7 @@ import (
 	"github.com/mongodb/mongo-go-driver/bson"
 	"github.com/mongodb/mongo-go-driver/bson/objectid"
 	mgo "github.com/mongodb/mongo-go-driver/mongo"
+	"github.com/mongodb/mongo-go-driver/mongo/findopt"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -120,14 +121,33 @@ var _ = Describe("MongoCollection", func() {
 			data1 := item{
 				Word:       "some-word",
 				Definition: "some-definition1",
+				Hits:       5,
 			}
 			_, err := c.InsertOne(data1)
 			Expect(err).ToNot(HaveOccurred())
+
 			data2 := item{
-				Word:       "some-word",
+				Word:       "some-word2",
 				Definition: "some-definition2",
+				Hits:       8,
 			}
 			_, err = c.InsertOne(data2)
+			Expect(err).ToNot(HaveOccurred())
+
+			data3 := item{
+				Word:       "some-word",
+				Definition: "some-definition3",
+				Hits:       8,
+			}
+			_, err = c.InsertOne(data3)
+			Expect(err).ToNot(HaveOccurred())
+
+			data4 := item{
+				Word:       "some-word",
+				Definition: "some-definition4",
+				Hits:       10,
+			}
+			_, err = c.InsertOne(data4)
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -136,20 +156,104 @@ var _ = Describe("MongoCollection", func() {
 				Word: "some-word",
 			})
 			Expect(err).ToNot(HaveOccurred())
-			Expect(len(results)).To(Equal(2))
+			Expect(len(results)).To(Equal(3))
 			for _, r := range results {
 				Expect(r.(*item).Word).To(Equal("some-word"))
 			}
 		})
 
-		It("should throw error if filter-schema and collection-schema mismatch", func() {
-			data := struct {
-				Mismatch string
-			}{
-				Mismatch: "yup",
-			}
-			_, err := c.DeleteMany(data)
-			Expect(err).To(HaveOccurred())
+		It(
+			"should throw error if filter-schema and collection-schema mismatch",
+			func() {
+				data := struct {
+					Mismatch string
+				}{
+					Mismatch: "yup",
+				}
+				_, err := c.DeleteMany(data)
+				Expect(err).To(HaveOccurred())
+			},
+		)
+
+		Describe("operations are performed on Find function", func() {
+			Context("sort operation is performed", func() {
+				It("should return results in asc order when asc is specified", func() {
+					findResults, err := c.Find(
+						&item{
+							Word: "some-word",
+						},
+						findopt.Sort(
+							map[string]interface{}{
+								"hits": 1,
+							},
+						),
+					)
+					Expect(err).ToNot(HaveOccurred())
+
+					hits := []int{}
+					for _, r := range findResults {
+						dbItem := r.(*item)
+						hits = append(hits, dbItem.Hits)
+					}
+
+					Expect(len(hits)).To(Equal(3))
+					Expect(hits[0]).To(Equal(5))
+					Expect(hits[1]).To(Equal(8))
+					Expect(hits[2]).To(Equal(10))
+				})
+
+				It("should return results in desc order when desc is specified", func() {
+					findResults, err := c.Find(
+						&item{
+							Word: "some-word",
+						},
+						findopt.Sort(
+							map[string]interface{}{
+								"hits": -1,
+							},
+						),
+					)
+					Expect(err).ToNot(HaveOccurred())
+
+					hits := []int{}
+					for _, r := range findResults {
+						dbItem := r.(*item)
+						hits = append(hits, dbItem.Hits)
+					}
+
+					Expect(len(hits)).To(Equal(3))
+					Expect(hits[0]).To(Equal(10))
+					Expect(hits[1]).To(Equal(8))
+					Expect(hits[2]).To(Equal(5))
+				})
+			})
+
+			Context("limit is specified on top of sort operation", func() {
+				It("should limit the \"find\" results as per limit", func() {
+					findResults, err := c.Find(
+						&item{
+							Word: "some-word",
+						},
+						findopt.Sort(
+							map[string]interface{}{
+								"hits": -1,
+							},
+						),
+						findopt.Limit(2),
+					)
+					Expect(err).ToNot(HaveOccurred())
+
+					hits := []int{}
+					for _, r := range findResults {
+						dbItem := r.(*item)
+						hits = append(hits, dbItem.Hits)
+					}
+
+					Expect(len(hits)).To(Equal(2))
+					Expect(hits[0]).To(Equal(10))
+					Expect(hits[1]).To(Equal(8))
+				})
+			})
 		})
 	})
 
