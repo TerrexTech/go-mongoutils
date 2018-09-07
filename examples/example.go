@@ -1,14 +1,11 @@
 package main
 
 import (
-	"context"
 	"log"
-	"time"
 
 	"github.com/TerrexTech/go-mongoutils/mongo"
 	"github.com/mongodb/mongo-go-driver/bson"
 	"github.com/mongodb/mongo-go-driver/bson/objectid"
-	mgo "github.com/mongodb/mongo-go-driver/mongo"
 	"github.com/mongodb/mongo-go-driver/mongo/findopt"
 	"github.com/pkg/errors"
 )
@@ -67,17 +64,15 @@ func main() {
 // createCollection demonstrates creating the collection and the associated database.
 func createCollection() (*mongo.Collection, error) {
 	// Would ideally set these config-params as environment vars
-	client, err := mgo.NewClient("mongodb://root:root@localhost:27017")
-	if err != nil {
-		log.Fatalln(err)
+	config := mongo.ClientConfig{
+		Hosts:               []string{"localhost:27017"},
+		Username:            "root",
+		Password:            "root",
+		TimeoutMilliseconds: 3000,
 	}
 
-	ctx, cancel := context.WithTimeout(
-		context.Background(),
-		time.Duration(1)*time.Second,
-	)
-	defer cancel()
-	err = client.Connect(ctx)
+	// ====> MongoDB Client
+	client, err := mongo.NewClient(config)
 	if err != nil {
 		log.Fatalln(err)
 	}

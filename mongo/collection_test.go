@@ -1,12 +1,17 @@
 package mongo
 
 import (
+	"log"
+	"os"
+	"strconv"
+
+	"github.com/TerrexTech/go-commonutils/utils"
 	"github.com/mongodb/mongo-go-driver/bson"
 	"github.com/mongodb/mongo-go-driver/bson/objectid"
-	mgo "github.com/mongodb/mongo-go-driver/mongo"
 	"github.com/mongodb/mongo-go-driver/mongo/findopt"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pkg/errors"
 )
 
 var _ = Describe("MongoCollection", func() {
@@ -16,21 +21,36 @@ var _ = Describe("MongoCollection", func() {
 		Definition string            `bson:"definition,omitempty" json:"definition,omitempty"`
 		Hits       int               `bson:"hits,omitempty" json:"hits,omitempty"`
 	}
-	var connectionTimeout uint = 1000
-	var resourceTimeout uint = 3000
 
-	var c *Collection
+	var (
+		connectionTimeout uint32
+		resourceTimeout   uint32
+		testDatabase      string
+		clientConfig      ClientConfig
+		c                 *Collection
+	)
 
-	createTestCollection := func() *Collection {
-		// collection to create
-		collection := "test_collection"
-
-		client, err := mgo.NewClient(connStr)
+	dropTestDatabase := func() {
+		client, err := NewClient(clientConfig)
 		Expect(err).ToNot(HaveOccurred())
 
-		connCtx, connCancel := newTimeoutContext(connectionTimeout)
-		err = client.Connect(connCtx)
-		connCancel()
+		dbCtx, dbCancel := newTimeoutContext(resourceTimeout)
+		err = client.Database(testDatabase).Drop(dbCtx)
+		dbCancel()
+		Expect(err).ToNot(HaveOccurred())
+
+		err = client.Disconnect()
+		Expect(err).ToNot(HaveOccurred())
+	}
+
+	createTestCollection := func() *Collection {
+		// Collection to create
+		collection := "test_collection"
+
+		client, err := NewClient(clientConfig)
+		Expect(err).ToNot(HaveOccurred())
+
+		err = client.Connect()
 		Expect(err).ToNot(HaveOccurred())
 
 		conn := &ConnectionConfig{
@@ -47,35 +67,53 @@ var _ = Describe("MongoCollection", func() {
 		return c
 	}
 
-	deleteTestDatabase := func() {
-		client, err := mgo.NewClient(connStr)
-		Expect(err).ToNot(HaveOccurred())
-
-		connCtx, connCancel := newTimeoutContext(connectionTimeout)
-		err = client.Connect(connCtx)
-		connCancel()
-		Expect(err).ToNot(HaveOccurred())
-
-		dbCtx, dbCancel := newTimeoutContext(resourceTimeout)
-		err = client.Database(testDatabase).Drop(dbCtx)
-		dbCancel()
-		Expect(err).ToNot(HaveOccurred())
-
-		closeCtx, closeCancel := newTimeoutContext(connectionTimeout)
-		defer closeCancel()
-		err = client.Disconnect(closeCtx)
-		Expect(err).ToNot(HaveOccurred())
-	}
-
 	BeforeEach(func() {
-		deleteTestDatabase()
+		hosts := os.Getenv("MONGO_TEST_HOSTS")
+		username := os.Getenv("MONGO_TEST_USERNAME")
+		password := os.Getenv("MONGO_TEST_PASSWORD")
+		connectionTimeoutStr := os.Getenv("MONGO_TEST_CONNECTION_TIMEOUT_MS")
+		resourceTimeoutStr := os.Getenv("MONGO_TEST_RESOURCE_TIMEOUT_MS")
+		testDatabase = os.Getenv("MONGO_TEST_DATABASE")
+
+		var err error
+		// Set Connection Timeout
+		connectionTimeoutInt, err := strconv.Atoi(connectionTimeoutStr)
+		if err != nil {
+			err = errors.Wrap(
+				err,
+				"error getting CONNECTION_TIMEOUT from env, will use 1000",
+			)
+			log.Println(err)
+			connectionTimeoutInt = 1000
+		}
+		connectionTimeout = uint32(connectionTimeoutInt)
+
+		// Set Resource Timeout
+		resourceTimeoutInt, err := strconv.Atoi(resourceTimeoutStr)
+		if err != nil {
+			err = errors.Wrap(
+				err,
+				"error getting RESOURCE_TIMEOUT from env, will use 1000",
+			)
+			log.Println(err)
+			resourceTimeoutInt = 3000
+		}
+		resourceTimeout = uint32(resourceTimeoutInt)
+
+		// Client Configuration
+		clientConfig = ClientConfig{
+			Hosts:               *utils.ParseHosts(hosts),
+			Username:            username,
+			Password:            password,
+			TimeoutMilliseconds: connectionTimeout,
+		}
+
+		dropTestDatabase()
 		c = createTestCollection()
 	})
 
 	AfterEach(func() {
-		closeCtx, closeCancel := newTimeoutContext(connectionTimeout)
-		defer closeCancel()
-		err := c.Connection.Client.Disconnect(closeCtx)
+		err := c.Connection.Client.Disconnect()
 		Expect(err).ToNot(HaveOccurred())
 	})
 

@@ -14,7 +14,7 @@ var _ = Describe("MongoUtils", func() {
 	Describe("newTimeoutContext", func() {
 		It("should return WithTimeout context with specified timeout", func() {
 			Context("deadline exceeds", func() {
-				timeout := uint(20) // Milliseconds
+				timeout := uint32(20) // Milliseconds
 				ctx, cancel := newTimeoutContext(timeout)
 				defer cancel()
 
@@ -35,7 +35,7 @@ var _ = Describe("MongoUtils", func() {
 			})
 
 			Context("deadline not does exceed", func() {
-				timeout := uint(20) // Milliseconds
+				timeout := uint32(20) // Milliseconds
 				ctx, cancel := newTimeoutContext(timeout)
 				defer cancel()
 

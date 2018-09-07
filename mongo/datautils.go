@@ -9,7 +9,7 @@ import (
 )
 
 // newTimeoutContext creates a new WithTimeout context with specified timeout.
-func newTimeoutContext(timeout uint) (ctx.Context, ctx.CancelFunc) {
+func newTimeoutContext(timeout uint32) (ctx.Context, ctx.CancelFunc) {
 	return ctx.WithTimeout(
 		ctx.Background(),
 		time.Duration(timeout)*time.Millisecond,
