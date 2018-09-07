@@ -33,6 +33,7 @@ addons:
   apt:
     packages:
       - docker-ce
+      - jq
 
 install:
   - dep ensure -v
@@ -62,7 +63,7 @@ before_deploy:
 deploy:
   provider: script
   skip_cleanup: true
-  script: curl -sL https://git.io/fAzLc | bash
+  script: curl -sL https://git.io/fAgkD | bash
   on:
     all_branches: true
     tags: true
