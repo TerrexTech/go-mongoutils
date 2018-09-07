@@ -1,6 +1,7 @@
 package mongo
 
 import (
+	"github.com/mongodb/mongo-go-driver/bson"
 	"github.com/mongodb/mongo-go-driver/bson/objectid"
 	mgo "github.com/mongodb/mongo-go-driver/mongo"
 	. "github.com/onsi/ginkgo"
@@ -12,6 +13,7 @@ var _ = Describe("MongoCollection", func() {
 		ID         objectid.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
 		Word       string            `bson:"word" json:"word"`
 		Definition string            `bson:"definition,omitempty" json:"definition,omitempty"`
+		Hits       int               `bson:"hits,omitempty" json:"hits,omitempty"`
 	}
 	var connectionTimeout uint = 1000
 	var resourceTimeout uint = 3000
@@ -231,6 +233,44 @@ var _ = Describe("MongoCollection", func() {
 			result, err := c.UpdateMany(filter, update)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result.UpsertedID).To(BeNil())
+		})
+	})
+
+	Describe("Aggregate", func() {
+		It("should run the specified aggregate pipeline", func() {
+			data1 := item{
+				Word:       "some-word",
+				Definition: "some-definition2",
+				Hits:       5,
+			}
+			_, err := c.InsertOne(data1)
+			Expect(err).ToNot(HaveOccurred())
+
+			data2 := item{
+				Word:       "some-word",
+				Definition: "some-definition2",
+				Hits:       10,
+			}
+			insertResult, err := c.InsertOne(data2)
+			Expect(err).ToNot(HaveOccurred())
+
+			pipeline := bson.NewArray(
+				bson.VC.DocumentFromElements(
+					bson.EC.SubDocumentFromElements(
+						"$match",
+						bson.EC.SubDocumentFromElements(
+							"hits",
+							bson.EC.Int32("$gt", 5),
+						),
+					),
+				),
+			)
+			aggResults, err := c.Aggregate(pipeline)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(aggResults)).To(Equal(1))
+
+			ar := aggResults[0].(*item)
+			Expect(ar.ID).To(Equal(insertResult.InsertedID))
 		})
 	})
 })
