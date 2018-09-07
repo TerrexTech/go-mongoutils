@@ -109,7 +109,7 @@ func (c *Collection) Find(filter interface{}) ([]interface{}, error) {
 	items := make([]interface{}, 0)
 	cursorCtx, cursorCancel := newTimeoutContext(c.Connection.Timeout)
 	for cur.Next(cursorCtx) {
-		item := c.SchemaStruct
+		item := copyInterface(c.SchemaStruct)
 		err := cur.Decode(item)
 		if err != nil {
 			cursorCancel()
