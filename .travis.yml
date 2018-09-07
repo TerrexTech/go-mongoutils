@@ -50,15 +50,7 @@ after_script:
   - docker-compose -f ./test/docker-compose.yaml down --volumes --rmi local
 
 before_deploy:
-  - export GIT_BRANCH=${TRAVIS_PULL_REQUEST_BRANCH:-$TRAVIS_BRANCH}
-  # Append "-release" to branch-name if its a tagged-commit.
-  # (Tagged commits should have naming-convention: "<tag-name>-release")
-  - export GIT_BRANCH=$(
-      if [[ -z "${TRAVIS_TAG}" ]];
-        then echo "-release";
-        else echo "";
-      fi
-    )
+  - export GIT_BRANCH=master
 
 deploy:
   provider: script
