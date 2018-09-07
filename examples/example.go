@@ -6,11 +6,11 @@ import (
 	"time"
 
 	"github.com/TerrexTech/go-mongoutils/mongo"
-	"github.com/pkg/errors"
-
+	"github.com/mongodb/mongo-go-driver/bson"
 	"github.com/mongodb/mongo-go-driver/bson/objectid"
 	mgo "github.com/mongodb/mongo-go-driver/mongo"
 	"github.com/mongodb/mongo-go-driver/mongo/findopt"
+	"github.com/pkg/errors"
 )
 
 // This is a type to hold our word definitions in
@@ -24,8 +24,49 @@ type item struct {
 }
 
 func main() {
-	// ===========> MongoDB Client
-	// Would ideally set connection string as an environment var
+	collection, err := createCollection()
+	if err != nil {
+		log.Fatalln(err, collection)
+	}
+
+	// ====> Insert Data
+	data1 := &item{
+		Word:       "some-word",
+		Definition: "some-definition",
+		Hits:       3,
+	}
+	insertData(collection, data1)
+
+	// Insert another record
+	data2 := &item{
+		Word:       "some-word2",
+		Definition: "some-definition",
+		Hits:       7,
+	}
+	insertData(collection, data2)
+
+	// ====> Find Data
+	findData(collection)
+
+	// ====> Find data and sort it by "Hits" is ascending order
+	findDataAndSortByHitsAsc(collection)
+
+	// ====> Get Max number of "Hits"
+	getMaxHits(collection)
+
+	// ====> Update Data
+	update(collection)
+
+	// ====> Delete Data
+	delete(collection)
+
+	// ====> Aggregate Pipeline
+	aggregatePipeline(collection)
+}
+
+// createCollection demonstrates creating the collection and the associated database.
+func createCollection() (*mongo.Collection, error) {
+	// Would ideally set these config-params as environment vars
 	client, err := mgo.NewClient("mongodb://root:root@localhost:27017")
 	if err != nil {
 		log.Fatalln(err)
@@ -41,7 +82,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	// ===========> Collection Configuration
+	// ====> Collection Configuration
 	conn := &mongo.ConnectionConfig{
 		Client:  client,
 		Timeout: 5000,
@@ -60,7 +101,7 @@ func main() {
 		},
 	}
 
-	// ===========> Create New Collection
+	// ====> Create New Collection
 	c := &mongo.Collection{
 		Connection:   conn,
 		Name:         "test_coll",
@@ -68,18 +109,12 @@ func main() {
 		SchemaStruct: &item{},
 		Indexes:      indexConfigs,
 	}
-	col, err := mongo.EnsureCollection(c)
-	if err != nil {
-		log.Fatalln(err)
-	}
+	return mongo.EnsureCollection(c)
+}
 
-	// ===========> Insert Data
-	data1 := &item{
-		Word:       "some-word",
-		Definition: "some-definition",
-		Hits:       5,
-	}
-	insertResult, err := c.InsertOne(data1)
+// insertData demonstrates inserting specified data into collection.
+func insertData(collection *mongo.Collection, data interface{}) {
+	insertResult, err := collection.InsertOne(data)
 	if err != nil {
 		err = errors.Wrap(
 			err,
@@ -89,52 +124,15 @@ func main() {
 		)
 		log.Println(err)
 	}
-	log.Println("Insert Result 1:")
+	log.Println("Insert Result:")
 	log.Println(insertResult)
+}
 
-	// Another Data Insertion
-	data2 := &item{
-		Word:       "some-word2",
-		Definition: "some-definition",
-		Hits:       3,
-	}
-	insertResult, err = c.InsertOne(data2)
-	if err != nil {
-		err = errors.Wrap(
-			err,
-			"Error Inserting Data into Collection. "+
-				"Most likely, this is because the same data has already been inserted, "+
-				"so the file-execution will still continue",
-		)
-		log.Println(err)
-	}
-	log.Println("Insert Result 2:")
-	log.Println(insertResult)
-
-	// And yet another Data Insertion
-	data3 := &item{
-		Word:       "some-word3",
-		Definition: "some-definition",
-		Hits:       7,
-	}
-	insertResult, err = c.InsertOne(data3)
-	if err != nil {
-		err = errors.Wrap(
-			err,
-			"Error Inserting Data into Collection. "+
-				"Most likely, this is because the same data has already been inserted, "+
-				"so the file-execution will still continue",
-		)
-		log.Println(err)
-	}
-	log.Println("Insert Result 3:")
-	log.Println(insertResult)
-
-	// ===========> Find Data
-	log.Println("=========================")
+// findData demostrates finding the data from collection.
+func findData(collection *mongo.Collection) {
 	// Filter for our data
-	findResults, err := c.Find(&item{
-		Word: "some-word",
+	findResults, err := collection.Find(&item{
+		Definition: "some-definition",
 	})
 	if err != nil {
 		log.Fatalln(err)
@@ -143,12 +141,14 @@ func main() {
 	log.Println("Find Results:")
 	for _, r := range findResults {
 		dbItem := r.(*item)
-		log.Println(dbItem.Word, dbItem.Definition)
+		log.Printf("%+v\n", dbItem)
 	}
+}
 
-	// ===========> Find Data - Sort ASC
-	log.Println("=========================")
-	findResults, err = c.Find(
+// findDataAndSortByHitsAsc demonstrates using "Sort" with "Find".
+func findDataAndSortByHitsAsc(collection *mongo.Collection) {
+	// Filter for our data
+	findResults, err := collection.Find(
 		// The filter parameter
 		&item{
 			Definition: "some-definition",
@@ -171,10 +171,13 @@ func main() {
 		dbItem := r.(*item)
 		log.Printf("%+v\n", dbItem)
 	}
+}
 
-	// ===========> Find Data - Get Max (Limit DESC Sort to 1)
-	log.Println("=========================")
-	findResults, err = c.Find(
+// getMaxHits demonstrates getting a "Max" value from collection.
+// In this case, we are getting max values of field "Hits".
+func getMaxHits(collection *mongo.Collection) {
+	// Filter for our data
+	findResults, err := collection.Find(
 		// The filter parameter
 		&item{
 			Definition: "some-definition",
@@ -194,13 +197,16 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	log.Println("Find Results (sorted in ascending order of \"Hits\"):")
+	log.Println("Find Results (max value of \"Hits\"):")
 	for _, r := range findResults {
 		dbItem := r.(*item)
+		// Can do dbItem.Hits to just display "Hits"
 		log.Printf("%+v\n", dbItem)
 	}
+}
 
-	// ===========> Update Data
+// update demonstrates updating an existing record.
+func update(collection *mongo.Collection) {
 	filter := &item{
 		Word: "some-word",
 	}
@@ -209,15 +215,17 @@ func main() {
 			"definition": "updated-definition",
 		},
 	}
-	updateResult, err := col.UpdateMany(filter, update)
+	updateResult, err := collection.UpdateMany(filter, update)
 	if err != nil {
 		log.Fatalln(err)
 	}
 	log.Println("Update Result:")
 	log.Println(updateResult)
+}
 
-	// ===========> Delete Data
-	delResult, err := c.DeleteMany(&item{
+// delete demonstrates deleting an existing record.
+func delete(collection *mongo.Collection) {
+	delResult, err := collection.DeleteMany(&item{
 		Word: "some-word",
 	})
 	if err != nil {
@@ -225,4 +233,27 @@ func main() {
 	}
 	log.Println("Delete Result:")
 	log.Println(delResult)
+}
+
+// aggregatePipeline demonstrates using mongo-pipelines.
+func aggregatePipeline(collection *mongo.Collection) {
+	pipeline := bson.NewArray(
+		bson.VC.DocumentFromElements(
+			bson.EC.SubDocumentFromElements(
+				"$match",
+				bson.EC.SubDocumentFromElements(
+					"hits",
+					bson.EC.Int32("$gte", 2),
+				),
+			),
+		),
+	)
+	aggResults, err := collection.Aggregate(pipeline)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	log.Println(len(aggResults))
+	for _, r := range aggResults {
+		log.Println(r.(*item))
+	}
 }
