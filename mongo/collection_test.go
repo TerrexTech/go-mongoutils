@@ -327,6 +327,58 @@ var _ = Describe("MongoCollection", func() {
 		})
 	})
 
+	Describe("InsertMany", func() {
+		It("should insert provided data if the data is not a pointer", func() {
+			data := []interface{}{
+				item{
+					Word:       "some-word",
+					Definition: "some-definition",
+				},
+				item{
+					Word:       "some-word2",
+					Definition: "some-definition2",
+				},
+			}
+			result, err := c.InsertMany(data)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(*result)).To(Equal(2))
+
+			for _, id := range *result {
+				Expect(id.InsertedID).To(BeAssignableToTypeOf(objectid.ObjectID{}))
+			}
+		})
+
+		It("should insert provided data if the data is a pointer", func() {
+			data := []interface{}{
+				&item{
+					Word:       "some-word",
+					Definition: "some-definition",
+				},
+				&item{
+					Word:       "some-word2",
+					Definition: "some-definition2",
+				},
+			}
+			result, err := c.InsertMany(data)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(*result)).To(Equal(2))
+
+			for _, id := range *result {
+				Expect(id.InsertedID).To(BeAssignableToTypeOf(objectid.ObjectID{}))
+			}
+		})
+
+		It("should throw error if filter-schema and collection-schema mismatch", func() {
+			data := struct {
+				Mismatch string
+			}{
+				Mismatch: "yup",
+			}
+			_, err := c.InsertOne(data)
+			Expect(err).To(HaveOccurred())
+		})
+	})
+
 	Describe("UpdateMany", func() {
 		// Insert some test-data
 		BeforeEach(func() {
