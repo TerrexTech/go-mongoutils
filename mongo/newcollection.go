@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/pkg/errors"
 
@@ -82,24 +83,22 @@ func verifySchemaStruct(schemaStruct interface{}) error {
 
 // verifyIndexKeys ensures that the keys specified in an index are also present in SchemaStruct.
 func verifyIndexKeys(schemaStruct interface{}, indexConfigs []IndexConfig) error {
-	structDoc, err := bson.NewDocumentEncoder().
-		EncodeDocument(schemaStruct)
-	if err != nil {
-		return err
-	}
-	collectionKeys, err := structDoc.Keys(false)
-	if err != nil {
-		return err
-	}
+	collectionKeys := []string{}
+	// Deref pointer and get its type
+	schemaType := reflect.ValueOf(schemaStruct).Elem().Type()
 
-	strKeys := []string{}
-	for _, key := range collectionKeys {
-		strKeys = append(strKeys, key.Name)
+	// Get the bson tag and compare it with fields present in index
+	for i := 0; i < schemaType.NumField(); i++ {
+		// This gets the bson tag, along with its props
+		fieldTags := schemaType.Field(i).Tag.Get("bson")
+		// Extract the name from the bson tag
+		tagName := strings.Split(fieldTags, ",")[0]
+		collectionKeys = append(collectionKeys, tagName)
 	}
 
 	for _, indexConfig := range indexConfigs {
 		for _, colConfig := range indexConfig.ColumnConfig {
-			isValid := utils.IsElementInSlice(strKeys, colConfig.Name)
+			isValid := utils.IsElementInSlice(collectionKeys, colConfig.Name)
 
 			if !isValid {
 				return fmt.Errorf(

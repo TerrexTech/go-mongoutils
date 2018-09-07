@@ -260,7 +260,7 @@ var _ = Describe("Mongo", func() {
 				keysDoc.Lookup("definition").Int32(),
 			).To(Equal(int32(1)))
 
-			// ====> Inspect index "test_index1"
+			// ====> Inspect index "test_index2"
 			testIndex2 := indexDocs["test_index2"]
 			// It should belong to collection "lib_test_db.test_collection"
 			Expect(
@@ -276,6 +276,91 @@ var _ = Describe("Mongo", func() {
 				keysDoc.Lookup("definition").Int32(),
 			).To(Equal(int32(1)))
 		})
+
+		It(
+			"should pass index verification even if the key includes 'omitempty' in tag",
+			func() {
+				client, err := mgo.NewClient(connStr)
+				Expect(err).ToNot(HaveOccurred())
+
+				connCtx, connCancel := newTimeoutContext(connectionTimeout)
+				err = client.Connect(connCtx)
+				connCancel()
+				Expect(err).ToNot(HaveOccurred())
+
+				type item struct {
+					ID         objectid.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
+					Word       string            `bson:"word,omitempty" json:"word"`
+					Definition string            `bson:"definition" json:"definition"`
+				}
+				indexConfigs := []IndexConfig{
+					IndexConfig{
+						ColumnConfig: []IndexColumnConfig{
+							IndexColumnConfig{
+								Name:        "word",
+								IsDescOrder: true,
+							},
+						},
+						IsUnique: true,
+						Name:     "test_index1",
+					},
+				}
+				conn := &ConnectionConfig{
+					Client:  client,
+					Timeout: resourceTimeout,
+				}
+
+				c, err := EnsureCollection(&Collection{
+					Connection:   conn,
+					Database:     testDatabase,
+					Indexes:      indexConfigs,
+					Name:         "test_collection",
+					SchemaStruct: &item{},
+				})
+				Expect(err).ToNot(HaveOccurred())
+
+				// Get indexes
+				indexCtx, indexCancel := newTimeoutContext(connectionTimeout)
+				cur, err := c.collection.Indexes().List(indexCtx)
+				indexCancel()
+				Expect(err).ToNot(HaveOccurred())
+
+				curCtx, curCancel := newTimeoutContext(resourceTimeout)
+
+				// Create Document-Array from indexes
+				indexDocs := map[string]*bson.Document{}
+				for cur.Next(curCtx) {
+					next := bson.NewDocument()
+					err = cur.Decode(next)
+					Expect(err).ToNot(HaveOccurred())
+
+					indexName := next.Lookup("name").StringValue()
+					indexDocs[indexName] = next
+				}
+				curCancel()
+
+				cursorCloseCtx, cursorCloseCancel := newTimeoutContext(c.Connection.Timeout)
+				err = cur.Close(cursorCloseCtx)
+				cursorCloseCancel()
+				Expect(err).ToNot(HaveOccurred())
+
+				// ====> Inspect index "test_index1"
+				testIndex1 := indexDocs["test_index1"]
+				// It should belong to collection "lib_test_db.test_collection"
+				Expect(
+					testIndex1.Lookup("ns").StringValue(),
+				).To(Equal("lib_test_db.test_collection"))
+				// It should have uniqueness
+				Expect(testIndex1.Lookup("unique").Boolean()).To(BeTrue())
+				// It should have the key: "word"
+				keys := testIndex1.LookupElement("key")
+				keysDoc := keys.Value().MutableDocument()
+				// The index-key "word" has to be in descending order
+				Expect(
+					keysDoc.Lookup("word").Int32(),
+				).To(Equal(int32(-1)))
+			},
+		)
 
 		It("should timeout on invalid connection-string", func() {
 			client, err := mgo.NewClient("mongodb://root:qweasd@some-invalid-address")
