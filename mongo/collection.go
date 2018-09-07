@@ -175,3 +175,37 @@ func (c *Collection) UpdateMany(
 	}
 	return result, errors.Wrap(err, "UpdateMany Error:")
 }
+
+// Aggregate runs an aggregation framework pipeline
+// See https://docs.mongodb.com/manual/aggregation/.
+func (c *Collection) Aggregate(pipeline interface{}) ([]interface{}, error) {
+	aggCtx, aggCancel := newTimeoutContext(c.Connection.Timeout)
+	cur, err := c.collection.Aggregate(aggCtx, pipeline)
+	aggCancel()
+
+	if err != nil {
+		err = errors.Wrap(err, "Aggregate Error")
+		return nil, err
+	}
+
+	items := make([]interface{}, 0)
+	curCtx, curCancel := newTimeoutContext(c.Connection.Timeout)
+	for cur.Next(curCtx) {
+		item := copyInterface(c.SchemaStruct)
+		err := cur.Decode(item)
+		if err != nil {
+			curCancel()
+			return nil, errors.Wrap(err, "Aggregate - Cursor Decode Error")
+		}
+		items = append(items, item)
+	}
+	curCancel()
+
+	cursorCloseCtx, cursorCloseCancel := newTimeoutContext(c.Connection.Timeout)
+	defer cursorCloseCancel()
+	err = cur.Close(cursorCloseCtx)
+	if err != nil {
+		err = errors.Wrap(err, "Aggregate - Error Closing Cursor")
+	}
+	return items, err
+}
