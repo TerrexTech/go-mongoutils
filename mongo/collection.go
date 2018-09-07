@@ -14,8 +14,8 @@ import (
 // ConnectionConfig defines the Client to use for
 // communicating with MongoDB, and the Timeout for that client.
 type ConnectionConfig struct {
-	Client  *mgo.Client
-	Timeout uint
+	Client  *Client
+	Timeout uint32
 }
 
 // IndexColumnConfig defines configuration for

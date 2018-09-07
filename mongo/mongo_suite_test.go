@@ -1,21 +1,24 @@
 package mongo
 
 import (
-	"os"
+	"log"
 	"testing"
 
+	"github.com/joho/godotenv"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pkg/errors"
 )
 
-var testDatabase = "lib_test_db"
-var connStr = os.Getenv("MONGODB_TEST_CONN_STR")
-
-// Tests will use this testDatabase
-func TestCassandra(t *testing.T) {
-	if connStr == "" {
-		connStr = "mongodb://root:root@localhost:27017"
+func TestMongo(t *testing.T) {
+	err := godotenv.Load("../test.env")
+	if err != nil {
+		err = errors.Wrap(err,
+			".env file not found, env-vars will be read as set in environment",
+		)
+		log.Println(err)
 	}
+
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Mongo Suite")
 }

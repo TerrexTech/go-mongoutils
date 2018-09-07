@@ -1,19 +1,27 @@
 package mongo
 
 import (
+	"log"
+	"os"
+	"strconv"
 	"strings"
 
+	"github.com/TerrexTech/go-commonutils/utils"
 	"github.com/mongodb/mongo-go-driver/bson"
 	"github.com/mongodb/mongo-go-driver/bson/objectid"
-	mgo "github.com/mongodb/mongo-go-driver/mongo"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pkg/errors"
 )
 
-var _ = Describe("Mongo", func() {
+var _ = Describe("Mongo - NewCollection", func() {
 	Context("new collection is created", func() {
-		var connectionTimeout uint = 1000
-		var resourceTimeout uint = 3000
+		var (
+			connectionTimeout uint32
+			resourceTimeout   uint32
+			clientConfig      ClientConfig
+			testDatabase      string
+		)
 
 		type item struct {
 			ID         objectid.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
@@ -23,12 +31,48 @@ var _ = Describe("Mongo", func() {
 
 		// Drop the test-database
 		BeforeEach(func() {
-			client, err := mgo.NewClient(connStr)
-			Expect(err).ToNot(HaveOccurred())
+			hosts := os.Getenv("MONGO_TEST_HOSTS")
+			username := os.Getenv("MONGO_TEST_USERNAME")
+			password := os.Getenv("MONGO_TEST_PASSWORD")
+			connectionTimeoutStr := os.Getenv("MONGO_TEST_CONNECTION_TIMEOUT_MS")
+			resourceTimeoutStr := os.Getenv("MONGO_TEST_RESOURCE_TIMEOUT_MS")
+			testDatabase = os.Getenv("MONGO_TEST_DATABASE")
 
-			connCtx, connCancel := newTimeoutContext(connectionTimeout)
-			err = client.Connect(connCtx)
-			connCancel()
+			var err error
+			// Set Connection Timeout
+			connectionTimeoutInt, err := strconv.Atoi(connectionTimeoutStr)
+			if err != nil {
+				err = errors.Wrap(
+					err,
+					"error getting CONNECTION_TIMEOUT from env, will use 1000",
+				)
+				log.Println(err)
+				connectionTimeoutInt = 1000
+			}
+			connectionTimeout = uint32(connectionTimeoutInt)
+
+			// Set Resource Timeout
+			resourceTimeoutInt, err := strconv.Atoi(resourceTimeoutStr)
+			if err != nil {
+				err = errors.Wrap(
+					err,
+					"error getting RESOURCE_TIMEOUT from env, will use 1000",
+				)
+				log.Println(err)
+				resourceTimeoutInt = 3000
+			}
+			resourceTimeout = uint32(resourceTimeoutInt)
+
+			// Client Configuration
+			clientConfig = ClientConfig{
+				Hosts:               *utils.ParseHosts(hosts),
+				Username:            username,
+				Password:            password,
+				TimeoutMilliseconds: connectionTimeout,
+			}
+
+			// Create a Mongo Client
+			client, err := NewClient(clientConfig)
 			Expect(err).ToNot(HaveOccurred())
 
 			dbCtx, dbCancel := newTimeoutContext(resourceTimeout)
@@ -36,9 +80,7 @@ var _ = Describe("Mongo", func() {
 			dbCancel()
 			Expect(err).ToNot(HaveOccurred())
 
-			closeCtx, closeCancel := newTimeoutContext(connectionTimeout)
-			defer closeCancel()
-			err = client.Disconnect(closeCtx)
+			err = client.Disconnect()
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -101,15 +143,13 @@ var _ = Describe("Mongo", func() {
 		})
 
 		It("should create database as specified", func() {
-			// collection to create
+			// Collection to create
 			collection := "test_collection"
 
-			client, err := mgo.NewClient(connStr)
+			client, err := NewClient(clientConfig)
 			Expect(err).ToNot(HaveOccurred())
 
-			connCtx, connCancel := newTimeoutContext(connectionTimeout)
-			err = client.Connect(connCtx)
-			connCancel()
+			err = client.Connect()
 			Expect(err).ToNot(HaveOccurred())
 
 			// Create collection and database
@@ -164,12 +204,10 @@ var _ = Describe("Mongo", func() {
 		})
 
 		It("should create indexes as specified", func() {
-			client, err := mgo.NewClient(connStr)
+			client, err := NewClient(clientConfig)
 			Expect(err).ToNot(HaveOccurred())
 
-			connCtx, connCancel := newTimeoutContext(connectionTimeout)
-			err = client.Connect(connCtx)
-			connCancel()
+			err = client.Connect()
 			Expect(err).ToNot(HaveOccurred())
 
 			type item struct {
@@ -280,12 +318,10 @@ var _ = Describe("Mongo", func() {
 		It(
 			"should pass index verification even if the key includes 'omitempty' in tag",
 			func() {
-				client, err := mgo.NewClient(connStr)
+				client, err := NewClient(clientConfig)
 				Expect(err).ToNot(HaveOccurred())
 
-				connCtx, connCancel := newTimeoutContext(connectionTimeout)
-				err = client.Connect(connCtx)
-				connCancel()
+				err = client.Connect()
 				Expect(err).ToNot(HaveOccurred())
 
 				type item struct {
@@ -363,13 +399,8 @@ var _ = Describe("Mongo", func() {
 		)
 
 		It("should timeout on invalid connection-string", func() {
-			client, err := mgo.NewClient("mongodb://root:qweasd@some-invalid-address")
-			Expect(err).ToNot(HaveOccurred())
-
-			ctx, cancel := newTimeoutContext(connectionTimeout)
-			defer cancel()
-
-			err = client.Connect(ctx)
+			clientConfig.Hosts = []string{"invalid-conn-str"}
+			client, err := NewClient(clientConfig)
 			Expect(err).ToNot(HaveOccurred())
 
 			indexConfigs := []IndexConfig{
