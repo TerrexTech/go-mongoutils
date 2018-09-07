@@ -21,11 +21,11 @@ func EnsureCollection(c *Collection) (*Collection, error) {
 	}
 	err := verifySchemaStruct(c.SchemaStruct)
 	if err != nil {
-		return nil, errors.Wrap(err, "Schema Verification Error:")
+		return nil, errors.Wrap(err, "Schema Verification Error")
 	}
 	err = verifyIndexKeys(c.SchemaStruct, c.Indexes)
 	if err != nil {
-		return nil, errors.Wrap(err, "Index-Keys Validation Error:")
+		return nil, errors.Wrap(err, "Index-Keys Validation Error")
 	}
 
 	c.collection = c.Connection.Client.

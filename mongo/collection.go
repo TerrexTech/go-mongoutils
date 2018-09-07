@@ -70,11 +70,11 @@ func (c *Collection) verifyDataSchema(data interface{}) error {
 func (c *Collection) DeleteMany(filter interface{}) (*mgo.DeleteResult, error) {
 	err := c.verifyDataSchema(filter)
 	if err != nil {
-		return nil, errors.Wrap(err, "DeleteMany - Schema Verification Error:")
+		return nil, errors.Wrap(err, "DeleteMany - Schema Verification Error")
 	}
 	doc, err := toBSON(filter)
 	if err != nil {
-		return nil, errors.Wrap(err, "DeleteMany - BSON Convert Error:")
+		return nil, errors.Wrap(err, "DeleteMany - BSON Convert Error")
 	}
 
 	ctx, cancel := newTimeoutContext(c.Connection.Timeout)
@@ -84,7 +84,7 @@ func (c *Collection) DeleteMany(filter interface{}) (*mgo.DeleteResult, error) {
 	if err != nil {
 		cancel()
 	}
-	return result, errors.Wrap(err, "Deletion Error:")
+	return result, errors.Wrap(err, "Deletion Error")
 }
 
 // Find finds the documents matching a model.
@@ -96,18 +96,18 @@ func (c *Collection) Find(
 ) ([]interface{}, error) {
 	err := c.verifyDataSchema(filter)
 	if err != nil {
-		return nil, errors.Wrap(err, "Find - Schema Verification Error:")
+		return nil, errors.Wrap(err, "Find - Schema Verification Error")
 	}
 	doc, err := toBSON(filter)
 	if err != nil {
-		return nil, errors.Wrap(err, "Find - BSON Convert Error:")
+		return nil, errors.Wrap(err, "Find - BSON Convert Error")
 	}
 
 	findCtx, findCancel := newTimeoutContext(c.Connection.Timeout)
 	cur, err := c.collection.Find(findCtx, doc, opts...)
 	if err != nil {
 		findCancel()
-		return nil, errors.Wrap(err, "Find Error:")
+		return nil, errors.Wrap(err, "Find Error")
 	}
 	findCancel()
 
@@ -118,7 +118,7 @@ func (c *Collection) Find(
 		err := cur.Decode(item)
 		if err != nil {
 			cursorCancel()
-			return nil, errors.Wrap(err, "Find - Cursor Decode Error:")
+			return nil, errors.Wrap(err, "Find - Cursor Decode Error")
 		}
 		items = append(items, item)
 	}
@@ -128,7 +128,7 @@ func (c *Collection) Find(
 	defer cursorCloseCancel()
 	err = cur.Close(cursorCloseCtx)
 	if err != nil {
-		err = errors.Wrap(err, "Find - Error Closing Cursor:")
+		err = errors.Wrap(err, "Find - Error Closing Cursor")
 	}
 	return items, err
 }
@@ -139,11 +139,11 @@ func (c *Collection) Find(
 func (c *Collection) InsertOne(data interface{}) (*mgo.InsertOneResult, error) {
 	err := c.verifyDataSchema(data)
 	if err != nil {
-		return nil, errors.Wrap(err, "InsertOne - Schema Verification Error:")
+		return nil, errors.Wrap(err, "InsertOne - Schema Verification Error")
 	}
 	doc, err := toBSON(data)
 	if err != nil {
-		return nil, errors.Wrap(err, "InsertOne - BSON Convert Error:")
+		return nil, errors.Wrap(err, "InsertOne - BSON Convert Error")
 	}
 
 	ctx, cancel := newTimeoutContext(c.Connection.Timeout)
@@ -153,7 +153,7 @@ func (c *Collection) InsertOne(data interface{}) (*mgo.InsertOneResult, error) {
 	if err != nil {
 		cancel()
 	}
-	return result, errors.Wrap(err, "InsertOne Error:")
+	return result, errors.Wrap(err, "InsertOne Error")
 }
 
 // UpdateMany updates multiple documents in the collection.
@@ -167,11 +167,11 @@ func (c *Collection) UpdateMany(
 	// update-methods. This might change in future as per requirements.
 	updateDoc, err := toBSON(update)
 	if err != nil {
-		return nil, errors.Wrap(err, "UpdateMany - BSON Convert Error:")
+		return nil, errors.Wrap(err, "UpdateMany - BSON Convert Error")
 	}
 	filterDoc, err := toBSON(filter)
 	if err != nil {
-		return nil, errors.Wrap(err, "UpdateMany - BSON Convert Error:")
+		return nil, errors.Wrap(err, "UpdateMany - BSON Convert Error")
 	}
 
 	ctx, cancel := newTimeoutContext(c.Connection.Timeout)
@@ -181,7 +181,7 @@ func (c *Collection) UpdateMany(
 	if err != nil {
 		cancel()
 	}
-	return result, errors.Wrap(err, "UpdateMany Error:")
+	return result, errors.Wrap(err, "UpdateMany Error")
 }
 
 // Aggregate runs an aggregation framework pipeline
