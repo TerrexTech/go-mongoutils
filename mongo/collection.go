@@ -89,7 +89,7 @@ func (c *Collection) DeleteMany(filter interface{}) (*mgo.DeleteResult, error) {
 	return result, err
 }
 
-// Find finds the documents matching a model.
+// Find finds the documents matching the filter.
 // The filter-data must match the schema provided at the time of Collection-
 // creation. Update the Collection.SchemaStruct if new schema is required.
 func (c *Collection) Find(
@@ -107,6 +107,62 @@ func (c *Collection) Find(
 
 	findCtx, findCancel := newTimeoutContext(c.Connection.Timeout)
 	cur, err := c.collection.Find(findCtx, doc, opts...)
+	if err != nil {
+		findCancel()
+		return nil, errors.Wrap(err, "Find Error")
+	}
+	findCancel()
+
+	items := make([]interface{}, 0)
+	cursorCtx, cursorCancel := newTimeoutContext(c.Connection.Timeout)
+	for cur.Next(cursorCtx) {
+		item := copyInterface(c.SchemaStruct)
+		err := cur.Decode(item)
+		if err != nil {
+			cursorCancel()
+			return nil, errors.Wrap(err, "Find - Cursor Decode Error")
+		}
+		items = append(items, item)
+	}
+	cursorCancel()
+
+	cursorCloseCtx, cursorCloseCancel := newTimeoutContext(c.Connection.Timeout)
+	defer cursorCloseCancel()
+	err = cur.Close(cursorCloseCtx)
+	if err != nil {
+		err = errors.Wrap(err, "Find - Error Closing Cursor")
+	}
+	return items, err
+}
+
+// FindMap finds the documents matching the filter.
+// The filter-data must be a map analogous to how the "find" argument would be
+// used in MongoDB. For example, a find-query in MongoDB such as:
+//  {hits: {$gt: 4, $lt: 9}}
+// can be represented in a map as:
+//  map[string]interface{}{
+//	  "hits": map[string]interface{
+//      "$gt": 4,
+//      "$lt": 9,
+//    },
+//  }
+func (c *Collection) FindMap(
+	filter interface{},
+	opts ...findopt.Find,
+) ([]interface{}, error) {
+	if reflect.TypeOf(filter).Kind() == reflect.Ptr {
+		return nil, errors.New("filter must be a non-pointer map")
+	}
+
+	isValidFilter := verifyKind(filter, reflect.Map)
+	if !isValidFilter {
+		return nil, errors.New(
+			"Find - Data must be a Map (pointer or non-pointer)",
+		)
+	}
+
+	findCtx, findCancel := newTimeoutContext(c.Connection.Timeout)
+	cur, err := c.collection.Find(findCtx, filter, opts...)
 	if err != nil {
 		findCancel()
 		return nil, errors.Wrap(err, "Find Error")
@@ -167,8 +223,8 @@ func (c *Collection) InsertOne(data interface{}) (*mgo.InsertOneResult, error) {
 func (c *Collection) InsertMany(
 	data []interface{},
 ) (*[]mgo.InsertOneResult, error) {
-	isValidType := verifyArrayOrSliceType(data)
-	if !isValidType {
+	isValidData := verifyKind(data, reflect.Array, reflect.Slice)
+	if !isValidData {
 		return nil, errors.New(
 			"InsertMany - Data must be Array or Slice (pointer or non-pointer)",
 		)

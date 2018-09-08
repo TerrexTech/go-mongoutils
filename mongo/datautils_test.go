@@ -2,6 +2,7 @@ package mongo
 
 import (
 	"context"
+	"reflect"
 	"time"
 
 	"github.com/mongodb/mongo-go-driver/bson/objectid"
@@ -128,55 +129,77 @@ var _ = Describe("MongoUtils", func() {
 		})
 	})
 
-	Describe("verifyArrayOrSliceType", func() {
-		Context("slice is passed", func() {
-			It("should return true", func() {
-				testSlice := []int{1, 2, 4, 5}
-				isSlice := verifyArrayOrSliceType(testSlice)
-				Expect(isSlice).To(BeTrue())
-			})
+	Describe("verifyKind", func() {
+		Specify("Test valid Slice", func() {
+			testSlice := []int{1, 2, 4, 5}
+			isSlice := verifyKind(testSlice, reflect.Slice)
+			Expect(isSlice).To(BeTrue())
 		})
 
-		Context("pointer to slice is passed", func() {
-			It("should return true", func() {
-				testSlice := &[]int{1, 2, 4, 5}
-				isSlice := verifyArrayOrSliceType(testSlice)
-				Expect(isSlice).To(BeTrue())
-			})
+		Specify("Test valid Array", func() {
+			testArray := [4]int{1, 2, 4, 5}
+			isArray := verifyKind(testArray, reflect.Array)
+			Expect(isArray).To(BeTrue())
 		})
 
-		Context("array is passed", func() {
-			It("should return true", func() {
-				testArray := [4]int{1, 2, 4, 5}
-				isArray := verifyArrayOrSliceType(testArray)
-				Expect(isArray).To(BeTrue())
-			})
+		Specify("Test valid Map", func() {
+			testMap := map[string]interface{}{}
+			isMap := verifyKind(testMap, reflect.Map)
+			Expect(isMap).To(BeTrue())
 		})
 
-		Context("pointer to array is passed", func() {
-			It("should return true", func() {
-				testArray := &[4]int{1, 2, 4, 5}
-				isArray := verifyArrayOrSliceType(testArray)
-				Expect(isArray).To(BeTrue())
-			})
+		Specify("Test valid String", func() {
+			testStr := "test"
+			isStr := verifyKind(testStr, reflect.String)
+			Expect(isStr).To(BeTrue())
 		})
 
-		Context("non array or slice is passed", func() {
-			It("should return false", func() {
-				testInt := 4
-				isValid := verifyArrayOrSliceType(testInt)
-				Expect(isValid).To(BeFalse())
+		Specify("Test valid Pointer-Slice", func() {
+			testSlice := &[]int{1, 2, 4, 5}
+			isSlice := verifyKind(testSlice, reflect.Slice)
+			Expect(isSlice).To(BeTrue())
+		})
 
-				testString := "test"
-				isValid = verifyArrayOrSliceType(testString)
-				Expect(isValid).To(BeFalse())
+		Specify("Test valid Pointer-Array", func() {
+			testArray := &[4]int{1, 2, 4, 5}
+			isArray := verifyKind(testArray, reflect.Array)
+			Expect(isArray).To(BeTrue())
+		})
 
-				testMap := map[string]interface{}{
-					"test": 1,
-				}
-				isValid = verifyArrayOrSliceType(testMap)
-				Expect(isValid).To(BeFalse())
-			})
+		Specify("Test valid Pointer-Map", func() {
+			testMap := &map[string]interface{}{}
+			isMap := verifyKind(testMap, reflect.Map)
+			Expect(isMap).To(BeTrue())
+		})
+
+		Specify("Test valid multiple possible kinds", func() {
+			testMap := map[string]interface{}{}
+			isMap := verifyKind(testMap, reflect.String, reflect.Map)
+			Expect(isMap).To(BeTrue())
+
+			testSlice := &[]int{1, 2, 4, 5}
+			isSlice := verifyKind(testSlice, reflect.Array, reflect.Slice)
+			Expect(isSlice).To(BeTrue())
+		})
+
+		Specify("Test invalid values", func() {
+			testMap := map[string]interface{}{}
+			isMap := verifyKind(testMap, reflect.String)
+			Expect(isMap).To(BeFalse())
+
+			testSlice := &[]int{1, 2, 4, 5}
+			isSlice := verifyKind(testSlice, reflect.Array)
+			Expect(isSlice).To(BeFalse())
+		})
+
+		Specify("Test invalid multiple possible kinds", func() {
+			testMap := map[string]interface{}{}
+			isMap := verifyKind(testMap, reflect.String, reflect.Slice)
+			Expect(isMap).To(BeFalse())
+
+			testSlice := &[]int{1, 2, 4, 5}
+			isSlice := verifyKind(testSlice, reflect.Array, reflect.String)
+			Expect(isSlice).To(BeFalse())
 		})
 	})
 })
