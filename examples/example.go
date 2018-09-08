@@ -61,6 +61,7 @@ func main() {
 	update(collection)
 
 	// ====> Delete Data
+	log.Println("==========> Demonstrate Deleting Data")
 	delete(collection)
 
 	// ====> Aggregate Pipeline
@@ -274,10 +275,9 @@ func update(collection *mongo.Collection) {
 	filter := &item{
 		Word: "some-word",
 	}
+	// Key: NewValue
 	update := &map[string]interface{}{
-		"$set": map[string]interface{}{
-			"definition": "updated-definition",
-		},
+		"definition": "updated-definition",
 	}
 	updateResult, err := collection.UpdateMany(filter, update)
 	if err != nil {
