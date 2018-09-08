@@ -251,15 +251,37 @@ func (c *Collection) UpdateMany(
 	filter interface{},
 	update interface{},
 ) (*mgo.UpdateResult, error) {
-	// We don't verify schema here to allow flexibility in
-	// update-methods. This might change in future as per requirements.
-	updateDoc, err := toBSON(update)
+	isValidFilter := verifyKind(filter, reflect.Map, reflect.Struct)
+	if !isValidFilter {
+		return nil, errors.New(
+			"UpdateMany - Filter-argument must be a Map or Struct " +
+				"(pointer or non-pointer)",
+		)
+	}
+	isValidUpdate := verifyKind(update, reflect.Map)
+	if !isValidUpdate {
+		return nil, errors.New(
+			"UpdateMany - Update-argument must be a Map (pointer or non-pointer)",
+		)
+	}
+
+	encodedUpdate := &map[string]interface{}{
+		"$set": update,
+	}
+
+	updateDoc, err := toBSON(encodedUpdate)
 	if err != nil {
-		return nil, errors.Wrap(err, "UpdateMany - BSON Convert Error")
+		return nil, errors.Wrap(
+			err,
+			"UpdateMany - BSON Convert Error for update-argument",
+		)
 	}
 	filterDoc, err := toBSON(filter)
 	if err != nil {
-		return nil, errors.Wrap(err, "UpdateMany - BSON Convert Error")
+		return nil, errors.Wrap(
+			err,
+			"UpdateMany - BSON Convert Error for filter-argument",
+		)
 	}
 
 	ctx, cancel := newTimeoutContext(c.Connection.Timeout)

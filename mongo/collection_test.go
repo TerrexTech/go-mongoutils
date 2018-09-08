@@ -616,9 +616,22 @@ var _ = Describe("MongoCollection", func() {
 			}
 
 			update := map[string]interface{}{
-				"$set": map[string]interface{}{
-					"definition": "some-definition1",
-				},
+				"definition": "some-definition1",
+			}
+
+			result, err := c.UpdateMany(filter, update)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.MatchedCount).To(Equal(int64(2)))
+			Expect(result.ModifiedCount).To(Equal(int64(1)))
+		})
+
+		It("should accept map as filter-definition", func() {
+			filter := map[string]interface{}{
+				"word": "some-word",
+			}
+
+			update := map[string]interface{}{
+				"definition": "some-definition1",
 			}
 
 			result, err := c.UpdateMany(filter, update)
@@ -633,14 +646,34 @@ var _ = Describe("MongoCollection", func() {
 			}
 
 			update := map[string]interface{}{
-				"$set": map[string]interface{}{
-					"definition": "some-definition1",
-				},
+				"definition": "some-definition1",
 			}
 
 			result, err := c.UpdateMany(filter, update)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result.UpsertedID).To(BeNil())
+		})
+
+		It("should return error if filter-argument is not a map or struct", func() {
+			filter := []int{0}
+
+			update := map[string]interface{}{
+				"definition": "some-definition1",
+			}
+
+			_, err := c.UpdateMany(filter, update)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should return error if update-argument is not a map", func() {
+			filter := item{
+				Word: "some-word",
+			}
+
+			update := []string{"test"}
+
+			_, err := c.UpdateMany(filter, update)
+			Expect(err).To(HaveOccurred())
 		})
 	})
 
