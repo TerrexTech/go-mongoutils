@@ -359,20 +359,23 @@ var _ = Describe("MongoCollection", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(len(results)).To(Equal(3))
 
-				r0 := results[0].(*item)
+				r0, assertOk := results[0].(*item)
 				Expect(r0.Word).To(Equal("some-word"))
 				Expect(r0.Definition).To(Equal("some-definition1"))
 				Expect(r0.Hits).To(Equal(5))
+				Expect(assertOk).To(BeTrue())
 
-				r1 := results[1].(*item)
+				r1, assertOk := results[1].(*item)
 				Expect(r1.Word).To(Equal("some-word2"))
 				Expect(r1.Definition).To(Equal("some-definition2"))
 				Expect(r1.Hits).To(Equal(8))
+				Expect(assertOk).To(BeTrue())
 
-				r2 := results[2].(*item)
+				r2, assertOk := results[2].(*item)
 				Expect(r2.Word).To(Equal("some-word"))
 				Expect(r2.Definition).To(Equal("some-definition3"))
 				Expect(r2.Hits).To(Equal(8))
+				Expect(assertOk).To(BeTrue())
 			})
 		})
 
@@ -428,8 +431,9 @@ var _ = Describe("MongoCollection", func() {
 
 					hits := []int{}
 					for _, r := range findResults {
-						dbItem := r.(*item)
+						dbItem, assertOk := r.(*item)
 						hits = append(hits, dbItem.Hits)
+						Expect(assertOk).To(BeTrue())
 					}
 
 					Expect(len(hits)).To(Equal(3))
@@ -453,8 +457,9 @@ var _ = Describe("MongoCollection", func() {
 
 					hits := []int{}
 					for _, r := range findResults {
-						dbItem := r.(*item)
+						dbItem, assertOk := r.(*item)
 						hits = append(hits, dbItem.Hits)
+						Expect(assertOk).To(BeTrue())
 					}
 
 					Expect(len(hits)).To(Equal(3))
@@ -481,8 +486,9 @@ var _ = Describe("MongoCollection", func() {
 
 					hits := []int{}
 					for _, r := range findResults {
-						dbItem := r.(*item)
+						dbItem, assertOk := r.(*item)
 						hits = append(hits, dbItem.Hits)
+						Expect(assertOk).To(BeTrue())
 					}
 
 					Expect(len(hits)).To(Equal(2))
