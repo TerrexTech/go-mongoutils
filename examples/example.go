@@ -21,48 +21,50 @@ type item struct {
 }
 
 func main() {
+	log.Println("==========> Demonstrate Client Creation")
 	client, err := createClient()
 	if err != nil {
 		log.Fatalln(err)
 	}
 
+	log.Println("==========> Demonstrate Collection Creation")
 	collection, err := createCollection(client)
 	if err != nil {
 		log.Fatalln(err, collection)
 	}
 
 	// ====> Insert Data
-	data1 := &item{
-		Word:       "some-word",
-		Definition: "some-definition",
-		Hits:       3,
-	}
-	insertData(collection, data1)
+	log.Println("==========> Demonstrate Data Insertion")
+	insertData(collection)
 
-	// Insert another record
-	data2 := &item{
-		Word:       "some-word2",
-		Definition: "some-definition",
-		Hits:       7,
-	}
-	insertData(collection, data2)
+	// ====> Insert Many
+	insertManyData(collection)
 
 	// ====> Find Data
+	log.Println("==========> Demonstrate Finding Data")
 	findData(collection)
 
 	// ====> Find data and sort it by "Hits" is ascending order
+	log.Println("==========> Demonstrate Finding and Sorting Data")
 	findDataAndSortByHitsAsc(collection)
 
 	// ====> Get Max number of "Hits"
+	log.Println("==========> Demonstrate Get Max from Documents")
 	getMaxHits(collection)
 
+	// ====> Get Values betweeen two Numbers
+	log.Println("==========> Demonstrate getting Data in Range")
+	getValuesInRange(collection)
+
 	// ====> Update Data
+	log.Println("==========> Demonstrate Updating Data")
 	update(collection)
 
 	// ====> Delete Data
 	delete(collection)
 
 	// ====> Aggregate Pipeline
+	log.Println("==========> Demonstrate Aggregate Pipeline")
 	aggregatePipeline(collection)
 }
 
@@ -79,6 +81,7 @@ func createClient() (*mongo.Client, error) {
 	// ====> MongoDB Client
 	client, err := mongo.NewClient(config)
 	// Let the parent functions handle error, always -.-
+	// (Even though in these examples, we won't, for simplicity)
 	return client, err
 }
 
@@ -115,7 +118,13 @@ func createCollection(client *mongo.Client) (*mongo.Collection, error) {
 }
 
 // insertData demonstrates inserting specified data into collection.
-func insertData(collection *mongo.Collection, data interface{}) {
+func insertData(collection *mongo.Collection) {
+	data := &item{
+		Word:       "some-word",
+		Definition: "some-definition",
+		Hits:       3,
+	}
+
 	insertResult, err := collection.InsertOne(data)
 	if err != nil {
 		err = errors.Wrap(
@@ -128,6 +137,44 @@ func insertData(collection *mongo.Collection, data interface{}) {
 	}
 	log.Println("Insert Result:")
 	log.Println(insertResult)
+}
+
+func insertManyData(collection *mongo.Collection) {
+	log.Println("==========> Demonstrate \"Many\" (array/slice) Data Insertion")
+	manyData := []interface{}{
+		&item{
+			Word:       "some-word",
+			Definition: "some-definition",
+			Hits:       5,
+		},
+		&item{
+			Word:       "some-word2",
+			Definition: "some-definition",
+			Hits:       7,
+		},
+		&item{
+			Word:       "some-word",
+			Definition: "some-definition",
+			Hits:       8,
+		},
+		&item{
+			Word:       "some-word",
+			Definition: "some-definition",
+			Hits:       10,
+		},
+	}
+	manyResult, err := collection.InsertMany(manyData)
+	if err != nil {
+		err = errors.Wrap(
+			err,
+			"Error in InsertMany. "+
+				"Most likely, this is because the same data has already been inserted, "+
+				"so the file-execution will still continue. "+
+				"However, no more insertions will be made from same data-set",
+		)
+		log.Println(err)
+	}
+	log.Println(manyResult)
 }
 
 // findData demostrates finding the data from collection.
@@ -205,6 +252,21 @@ func getMaxHits(collection *mongo.Collection) {
 		// Can do dbItem.Hits to just display "Hits"
 		log.Printf("%+v\n", dbItem)
 	}
+}
+
+// getValuesInRange demonstrates getting values between two numbers.
+func getValuesInRange(collection *mongo.Collection) {
+	results, err := collection.FindMap(map[string]interface{}{
+		"hits": map[string]int{
+			"$gt": 4,
+			"$lt": 9,
+		},
+	})
+
+	if err != nil {
+		log.Fatalln(err)
+	}
+	log.Println(results)
 }
 
 // update demonstrates updating an existing record.

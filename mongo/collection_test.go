@@ -156,36 +156,29 @@ var _ = Describe("MongoCollection", func() {
 	Describe("Find", func() {
 		// Insert some test-data
 		BeforeEach(func() {
-			data1 := item{
-				Word:       "some-word",
-				Definition: "some-definition1",
-				Hits:       5,
+			data := []interface{}{
+				&item{
+					Word:       "some-word",
+					Definition: "some-definition1",
+					Hits:       5,
+				},
+				&item{
+					Word:       "some-word2",
+					Definition: "some-definition2",
+					Hits:       8,
+				},
+				&item{
+					Word:       "some-word",
+					Definition: "some-definition3",
+					Hits:       8,
+				},
+				&item{
+					Word:       "some-word",
+					Definition: "some-definition4",
+					Hits:       10,
+				},
 			}
-			_, err := c.InsertOne(data1)
-			Expect(err).ToNot(HaveOccurred())
-
-			data2 := item{
-				Word:       "some-word2",
-				Definition: "some-definition2",
-				Hits:       8,
-			}
-			_, err = c.InsertOne(data2)
-			Expect(err).ToNot(HaveOccurred())
-
-			data3 := item{
-				Word:       "some-word",
-				Definition: "some-definition3",
-				Hits:       8,
-			}
-			_, err = c.InsertOne(data3)
-			Expect(err).ToNot(HaveOccurred())
-
-			data4 := item{
-				Word:       "some-word",
-				Definition: "some-definition4",
-				Hits:       10,
-			}
-			_, err = c.InsertOne(data4)
+			_, err := c.InsertMany(data)
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -208,7 +201,7 @@ var _ = Describe("MongoCollection", func() {
 				}{
 					Mismatch: "yup",
 				}
-				_, err := c.DeleteMany(data)
+				_, err := c.Find(data)
 				Expect(err).To(HaveOccurred())
 			},
 		)
@@ -271,6 +264,211 @@ var _ = Describe("MongoCollection", func() {
 					findResults, err := c.Find(
 						&item{
 							Word: "some-word",
+						},
+						findopt.Sort(
+							map[string]interface{}{
+								"hits": -1,
+							},
+						),
+						findopt.Limit(2),
+					)
+					Expect(err).ToNot(HaveOccurred())
+
+					hits := []int{}
+					for _, r := range findResults {
+						dbItem := r.(*item)
+						hits = append(hits, dbItem.Hits)
+					}
+
+					Expect(len(hits)).To(Equal(2))
+					Expect(hits[0]).To(Equal(10))
+					Expect(hits[1]).To(Equal(8))
+				})
+			})
+		})
+	})
+
+	Describe("FindMap", func() {
+		// Insert some test-data
+		BeforeEach(func() {
+			data := []interface{}{
+				&item{
+					Word:       "some-word",
+					Definition: "some-definition1",
+					Hits:       5,
+				},
+				&item{
+					Word:       "some-word2",
+					Definition: "some-definition2",
+					Hits:       8,
+				},
+				&item{
+					Word:       "some-word",
+					Definition: "some-definition3",
+					Hits:       8,
+				},
+				&item{
+					Word:       "some-word",
+					Definition: "some-definition4",
+					Hits:       10,
+				},
+			}
+			_, err := c.InsertMany(data)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		Describe("simple equality-find operation", func() {
+			It("should find any documents that match the filter", func() {
+				// map[string]string test
+				results, err := c.FindMap(map[string]string{
+					"word": "some-word",
+				})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(len(results)).To(Equal(3))
+				for _, r := range results {
+					Expect(r.(*item).Word).To(Equal("some-word"))
+				}
+
+				// map[string]interface{} test
+				results, err = c.FindMap(map[string]interface{}{
+					"word": "some-word",
+				})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(len(results)).To(Equal(3))
+				for _, r := range results {
+					Expect(r.(*item).Word).To(Equal("some-word"))
+				}
+			})
+
+			It("should return error if filter is pointer-type", func() {
+				_, err := c.FindMap(&map[string]string{
+					"word": "some-word",
+				})
+				Expect(err).To(HaveOccurred())
+			})
+		})
+
+		Describe("find-between numeric-values operation", func() {
+			It("should find any documents that match the filter", func() {
+				results, err := c.FindMap(map[string]interface{}{
+					"hits": map[string]int{
+						"$gt": 4,
+						"$lt": 9,
+					},
+				})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(len(results)).To(Equal(3))
+
+				r0 := results[0].(*item)
+				Expect(r0.Word).To(Equal("some-word"))
+				Expect(r0.Definition).To(Equal("some-definition1"))
+				Expect(r0.Hits).To(Equal(5))
+
+				r1 := results[1].(*item)
+				Expect(r1.Word).To(Equal("some-word2"))
+				Expect(r1.Definition).To(Equal("some-definition2"))
+				Expect(r1.Hits).To(Equal(8))
+
+				r2 := results[2].(*item)
+				Expect(r2.Word).To(Equal("some-word"))
+				Expect(r2.Definition).To(Equal("some-definition3"))
+				Expect(r2.Hits).To(Equal(8))
+			})
+		})
+
+		It(
+			"should throw error if a non-map is provided",
+			func() {
+				data := struct {
+					Mismatch string
+				}{
+					Mismatch: "yup",
+				}
+				_, err := c.FindMap(data)
+				Expect(err).To(HaveOccurred())
+
+				data2 := &struct {
+					Mismatch string
+				}{
+					Mismatch: "yup",
+				}
+				_, err = c.FindMap(data2)
+				Expect(err).To(HaveOccurred())
+			},
+		)
+
+		Describe("operations are performed on FindMap function", func() {
+			Context("sort operation is performed", func() {
+				It("should return error if filter-opts is pointer-type", func() {
+					_, err := c.FindMap(
+						map[string]string{
+							"word": "some-word",
+						},
+						findopt.Sort(
+							&map[string]interface{}{
+								"hits": 1,
+							},
+						),
+					)
+					Expect(err).To(HaveOccurred())
+				})
+
+				It("should return results in asc order when asc is specified", func() {
+					findResults, err := c.FindMap(
+						map[string]string{
+							"word": "some-word",
+						},
+						findopt.Sort(
+							map[string]interface{}{
+								"hits": 1,
+							},
+						),
+					)
+					Expect(err).ToNot(HaveOccurred())
+
+					hits := []int{}
+					for _, r := range findResults {
+						dbItem := r.(*item)
+						hits = append(hits, dbItem.Hits)
+					}
+
+					Expect(len(hits)).To(Equal(3))
+					Expect(hits[0]).To(Equal(5))
+					Expect(hits[1]).To(Equal(8))
+					Expect(hits[2]).To(Equal(10))
+				})
+
+				It("should return results in desc order when desc is specified", func() {
+					findResults, err := c.FindMap(
+						map[string]string{
+							"word": "some-word",
+						},
+						findopt.Sort(
+							map[string]interface{}{
+								"hits": -1,
+							},
+						),
+					)
+					Expect(err).ToNot(HaveOccurred())
+
+					hits := []int{}
+					for _, r := range findResults {
+						dbItem := r.(*item)
+						hits = append(hits, dbItem.Hits)
+					}
+
+					Expect(len(hits)).To(Equal(3))
+					Expect(hits[0]).To(Equal(10))
+					Expect(hits[1]).To(Equal(8))
+					Expect(hits[2]).To(Equal(5))
+				})
+			})
+
+			Context("limit is specified on top of sort operation", func() {
+				It("should limit the \"find\" results as per limit", func() {
+					findResults, err := c.FindMap(
+						map[string]string{
+							"word": "some-word",
 						},
 						findopt.Sort(
 							map[string]interface{}{
@@ -375,6 +573,16 @@ var _ = Describe("MongoCollection", func() {
 				Mismatch: "yup",
 			}
 			_, err := c.InsertOne(data)
+			Expect(err).To(HaveOccurred())
+
+			data2 := []interface{}{
+				&item{
+					Word:       "some-word",
+					Definition: "some-definition",
+				},
+				"invalid-element",
+			}
+			_, err = c.InsertOne(data2)
 			Expect(err).To(HaveOccurred())
 		})
 	})
