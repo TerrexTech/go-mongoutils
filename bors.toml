@@ -1,4 +1,4 @@
-status = [ "continuous-integration/travis-ci/push", "GolangCI" ]
+status = [ "continuous-integration/travis-ci/push" ]
 delete_merged_branches = true
 [committer]
 name = "Ninja Bruh"
