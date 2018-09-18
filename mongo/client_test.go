@@ -6,7 +6,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/TerrexTech/go-commonutils/utils"
+	"github.com/TerrexTech/go-commonutils/commonutil"
 	mgo "github.com/mongodb/mongo-go-driver/mongo"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -44,7 +44,7 @@ var _ = Describe("MongoClient", func() {
 
 			// Client Configuration
 			clientConfig = ClientConfig{
-				Hosts:               *utils.ParseHosts(hosts),
+				Hosts:               *commonutil.ParseHosts(hosts),
 				Username:            username,
 				Password:            password,
 				TimeoutMilliseconds: connectionTimeout,
