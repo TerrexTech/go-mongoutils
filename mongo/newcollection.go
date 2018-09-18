@@ -8,7 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/TerrexTech/go-commonutils/utils"
+	"github.com/TerrexTech/go-commonutils/commonutil"
 	"github.com/mongodb/mongo-go-driver/bson"
 	mgo "github.com/mongodb/mongo-go-driver/mongo"
 )
@@ -98,7 +98,7 @@ func verifyIndexKeys(schemaStruct interface{}, indexConfigs []IndexConfig) error
 
 	for _, indexConfig := range indexConfigs {
 		for _, colConfig := range indexConfig.ColumnConfig {
-			isValid := utils.IsElementInSlice(collectionKeys, colConfig.Name)
+			isValid := commonutil.IsElementInSlice(collectionKeys, colConfig.Name)
 
 			if !isValid {
 				return fmt.Errorf(
