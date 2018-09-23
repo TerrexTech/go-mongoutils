@@ -288,6 +288,61 @@ var _ = Describe("MongoCollection", func() {
 		})
 	})
 
+	Describe("FindOne", func() {
+		var data []interface{}
+		// Insert some test-data
+		BeforeEach(func() {
+			// The order of items here might make differences in tests
+			data = []interface{}{
+				&item{
+					Word:       "some-word",
+					Definition: "some-definition1",
+					Hits:       5,
+				},
+				&item{
+					Word:       "some-word2",
+					Definition: "some-definition2",
+					Hits:       8,
+				},
+				&item{
+					Word:       "some-word",
+					Definition: "some-definition3",
+					Hits:       8,
+				},
+				&item{
+					Word:       "some-word",
+					Definition: "some-definition4",
+					Hits:       10,
+				},
+			}
+			_, err := c.InsertMany(data)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("should return the document matching the filter", func() {
+			result, err := c.FindOne(&item{
+				Word: "some-word",
+			})
+			Expect(err).ToNot(HaveOccurred())
+			resultItem, ok := result.(*item)
+			Expect(ok).To(BeTrue())
+			Expect(resultItem.Word).To(Equal("some-word"))
+		})
+
+		It(
+			"should throw error if filter-schema and collection-schema mismatch",
+			func() {
+				data := struct {
+					Mismatch string
+				}{
+					Mismatch: "yup",
+				}
+				_, err := c.FindOne(data)
+				Expect(err).To(HaveOccurred())
+			},
+		)
+	})
+
 	Describe("FindMap", func() {
 		// Insert some test-data
 		BeforeEach(func() {
