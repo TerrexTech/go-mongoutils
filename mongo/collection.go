@@ -135,6 +135,35 @@ func (c *Collection) Find(
 	return items, err
 }
 
+// FindOne returns single result that matches the provided filter.
+// The filter-data must match the schema provided at the time of Collection-
+// creation. Update the Collection.SchemaStruct if new schema is required.
+func (c *Collection) FindOne(
+	filter interface{},
+	opts ...findopt.One,
+) (interface{}, error) {
+	err := c.verifyDataSchema(filter)
+	if err != nil {
+		return nil, errors.Wrap(err, "Find - Schema Verification Error")
+	}
+	doc, err := toBSON(filter)
+	if err != nil {
+		return nil, errors.Wrap(err, "Find - BSON Convert Error")
+	}
+
+	findCtx, findCancel := newTimeoutContext(c.Connection.Timeout)
+
+	result := copyInterface(c.SchemaStruct)
+	err = c.collection.FindOne(findCtx, doc, opts...).Decode(result)
+	if err != nil {
+		findCancel()
+		return nil, errors.Wrap(err, "FindOne Decoding Error")
+	}
+	findCancel()
+
+	return result, nil
+}
+
 // FindMap finds the documents matching the filter.
 // The filter-data must be a map analogous to how the "find" argument would be
 // used in MongoDB. For example, a find-query in MongoDB such as:
@@ -151,13 +180,13 @@ func (c *Collection) FindMap(
 	opts ...findopt.Find,
 ) ([]interface{}, error) {
 	if reflect.TypeOf(filter).Kind() == reflect.Ptr {
-		return nil, errors.New("filter must be a non-pointer map")
+		return nil, errors.New("FindMap - Filter must be a non-pointer map")
 	}
 
 	isValidFilter := verifyKind(filter, reflect.Map)
 	if !isValidFilter {
 		return nil, errors.New(
-			"Find - Data must be a Map (pointer or non-pointer)",
+			"FindMap - Data must be a Map (pointer or non-pointer)",
 		)
 	}
 
@@ -165,7 +194,7 @@ func (c *Collection) FindMap(
 	cur, err := c.collection.Find(findCtx, filter, opts...)
 	if err != nil {
 		findCancel()
-		return nil, errors.Wrap(err, "Find Error")
+		return nil, errors.Wrap(err, "FindMap Error")
 	}
 	findCancel()
 
@@ -176,7 +205,7 @@ func (c *Collection) FindMap(
 		err := cur.Decode(item)
 		if err != nil {
 			cursorCancel()
-			return nil, errors.Wrap(err, "Find - Cursor Decode Error")
+			return nil, errors.Wrap(err, "FindMap - Cursor Decode Error")
 		}
 		items = append(items, item)
 	}
@@ -186,7 +215,7 @@ func (c *Collection) FindMap(
 	defer cursorCloseCancel()
 	err = cur.Close(cursorCloseCtx)
 	if err != nil {
-		err = errors.Wrap(err, "Find - Error Closing Cursor")
+		err = errors.Wrap(err, "FindMap - Error Closing Cursor")
 	}
 	return items, err
 }
