@@ -12,6 +12,6 @@ linters-settings:
     check-type-assertions: true
     check-blank: true
   lll:
-    line-length: 80
+    line-length: 90
   unparam:
     algo: rta
