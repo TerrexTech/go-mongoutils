@@ -44,6 +44,10 @@ func main() {
 	log.Println("==========> Demonstrate Finding Data")
 	findData(collection)
 
+	// ====> Find Single Data-Item
+	log.Println("==========> Demonstrate Finding Single Data-Item")
+	findOneData(collection)
+
 	// ====> Find data and sort it by "Hits" is ascending order
 	log.Println("==========> Demonstrate Finding and Sorting Data")
 	findDataAndSortByHitsAsc(collection)
@@ -195,6 +199,23 @@ func findData(collection *mongo.Collection) {
 	}
 }
 
+// findOneData demostrates finding a single result (even if filter mathces multiple
+// results) from database. If filter mathes multiple items, the first-matched item is
+// returned.
+func findOneData(collection *mongo.Collection) {
+	// Filter for our data
+	findResult, err := collection.FindOne(&item{
+		Definition: "some-definition",
+	})
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	log.Println("FindOne Result:")
+	dbItem := findResult.(*item)
+	log.Printf("%+v\n", dbItem)
+}
+
 // findDataAndSortByHitsAsc demonstrates using "Sort" with "Find".
 func findDataAndSortByHitsAsc(collection *mongo.Collection) {
 	// Filter for our data
@@ -257,7 +278,7 @@ func getMaxHits(collection *mongo.Collection) {
 
 // getValuesInRange demonstrates getting values between two numbers.
 func getValuesInRange(collection *mongo.Collection) {
-	results, err := collection.FindMap(map[string]interface{}{
+	results, err := collection.Find(map[string]interface{}{
 		"hits": map[string]int{
 			"$gt": 4,
 			"$lt": 9,

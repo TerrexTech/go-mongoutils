@@ -1,6 +1,7 @@
 package mongo
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 
@@ -49,18 +50,26 @@ type Collection struct {
 // this is only intended to prevent unexpected behavior.
 func (c *Collection) verifyDataSchema(data interface{}) error {
 	dataType := reflect.TypeOf(data).String()
+
+	isMap := strings.HasPrefix(dataType, "map[string]")
+	isPointerMap := strings.HasPrefix(dataType, "*map[string]")
+	if isMap || isPointerMap {
+		return nil
+	}
+
 	// Add "*" if absent because the SchemaStruct we stored is a pointer,
 	// but its not necessary that data (to validate) must also be a pointer
-	// (for example, data-insertion can be used with and without a pointer),
+	// (for example, data-insertion can be used with and without a pointer).
 	if !strings.HasPrefix(dataType, "*") {
 		dataType = "*" + dataType
 	}
 	expectedType := reflect.TypeOf(c.SchemaStruct).String()
 
 	if dataType != expectedType {
-		return errors.New(
+		return fmt.Errorf(
 			"Mismatch between provided data-schema and expected schema. " +
-				"Consider changing collection.SchemaStruct if required.",
+				"Consider changing collection.SchemaStruct if required. " +
+				"A map[string]interface{} (pointer or non-pointer) can also be used as parameter.",
 		)
 	}
 	return nil
@@ -92,6 +101,15 @@ func (c *Collection) DeleteMany(filter interface{}) (*mgo.DeleteResult, error) {
 // Find finds the documents matching the filter.
 // The filter-data must match the schema provided at the time of Collection-
 // creation. Update the Collection.SchemaStruct if new schema is required.
+// A map can also be provided as filter.  For example, a find-query in MongoDB such as:
+//  {hits: {$gt: 4, $lt: 9}}
+// can be represented in a map as:
+//  map[string]interface{}{
+//	  "hits": map[string]interface{
+//      "$gt": 4,
+//      "$lt": 9,
+//    },
+//  }
 func (c *Collection) Find(
 	filter interface{},
 	opts ...findopt.Find,
@@ -162,62 +180,6 @@ func (c *Collection) FindOne(
 	findCancel()
 
 	return result, nil
-}
-
-// FindMap finds the documents matching the filter.
-// The filter-data must be a map analogous to how the "find" argument would be
-// used in MongoDB. For example, a find-query in MongoDB such as:
-//  {hits: {$gt: 4, $lt: 9}}
-// can be represented in a map as:
-//  map[string]interface{}{
-//	  "hits": map[string]interface{
-//      "$gt": 4,
-//      "$lt": 9,
-//    },
-//  }
-func (c *Collection) FindMap(
-	filter interface{},
-	opts ...findopt.Find,
-) ([]interface{}, error) {
-	if reflect.TypeOf(filter).Kind() == reflect.Ptr {
-		return nil, errors.New("FindMap - Filter must be a non-pointer map")
-	}
-
-	isValidFilter := verifyKind(filter, reflect.Map)
-	if !isValidFilter {
-		return nil, errors.New(
-			"FindMap - Data must be a Map (pointer or non-pointer)",
-		)
-	}
-
-	findCtx, findCancel := newTimeoutContext(c.Connection.Timeout)
-	cur, err := c.collection.Find(findCtx, filter, opts...)
-	if err != nil {
-		findCancel()
-		return nil, errors.Wrap(err, "FindMap Error")
-	}
-	findCancel()
-
-	items := make([]interface{}, 0)
-	cursorCtx, cursorCancel := newTimeoutContext(c.Connection.Timeout)
-	for cur.Next(cursorCtx) {
-		item := copyInterface(c.SchemaStruct)
-		err := cur.Decode(item)
-		if err != nil {
-			cursorCancel()
-			return nil, errors.Wrap(err, "FindMap - Cursor Decode Error")
-		}
-		items = append(items, item)
-	}
-	cursorCancel()
-
-	cursorCloseCtx, cursorCloseCancel := newTimeoutContext(c.Connection.Timeout)
-	defer cursorCloseCancel()
-	err = cur.Close(cursorCloseCtx)
-	if err != nil {
-		err = errors.Wrap(err, "FindMap - Error Closing Cursor")
-	}
-	return items, err
 }
 
 // InsertOne inserts the provided data into Collection.
@@ -338,7 +300,7 @@ func (c *Collection) Aggregate(pipeline interface{}) ([]interface{}, error) {
 	items := make([]interface{}, 0)
 	curCtx, curCancel := newTimeoutContext(c.Connection.Timeout)
 	for cur.Next(curCtx) {
-		item := copyInterface(c.SchemaStruct)
+		item := map[string]interface{}{}
 		err := cur.Decode(item)
 		if err != nil {
 			curCancel()
