@@ -45,6 +45,13 @@ type Collection struct {
 	collection   *mgo.Collection
 }
 
+// Collection returns the embedded Mongo-Go-Driver Collection.
+// Use this only when absolutely required,
+// and prefer inbuilt functions over functions from this.
+func (c *Collection) Collection() *mgo.Collection {
+	return c.collection
+}
+
 // verifyDataSchema checks if the provided data's schema matches the
 // Collection.SchemaStruct. The SchemaStruct can be changed as required,
 // this is only intended to prevent unexpected behavior.
