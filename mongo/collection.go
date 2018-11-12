@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/mongodb/mongo-go-driver/bson"
+
 	"github.com/mongodb/mongo-go-driver/mongo/findopt"
 
 	"github.com/pkg/errors"
@@ -90,7 +92,7 @@ func (c *Collection) DeleteMany(filter interface{}) (*mgo.DeleteResult, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "DeleteMany - Schema Verification Error")
 	}
-	doc, err := toBSON(filter)
+	doc, err := bson.Marshal(filter)
 	if err != nil {
 		return nil, errors.Wrap(err, "DeleteMany - BSON Convert Error")
 	}
@@ -125,7 +127,7 @@ func (c *Collection) Find(
 	if err != nil {
 		return nil, errors.Wrap(err, "Find - Schema Verification Error")
 	}
-	doc, err := toBSON(filter)
+	doc, err := bson.Marshal(filter)
 	if err != nil {
 		return nil, errors.Wrap(err, "Find - BSON Convert Error")
 	}
@@ -171,7 +173,7 @@ func (c *Collection) FindOne(
 	if err != nil {
 		return nil, errors.Wrap(err, "Find - Schema Verification Error")
 	}
-	doc, err := toBSON(filter)
+	doc, err := bson.Marshal(filter)
 	if err != nil {
 		return nil, errors.Wrap(err, "Find - BSON Convert Error")
 	}
@@ -197,7 +199,7 @@ func (c *Collection) InsertOne(data interface{}) (*mgo.InsertOneResult, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "InsertOne - Schema Verification Error")
 	}
-	doc, err := toBSON(data)
+	doc, err := bson.Marshal(data)
 	if err != nil {
 		return nil, errors.Wrap(err, "InsertOne - BSON Convert Error")
 	}
@@ -263,18 +265,18 @@ func (c *Collection) UpdateMany(
 		)
 	}
 
-	encodedUpdate := &map[string]interface{}{
+	encodedUpdate := map[string]interface{}{
 		"$set": update,
 	}
 
-	updateDoc, err := toBSON(encodedUpdate)
+	updateDoc, err := bson.Marshal(encodedUpdate)
 	if err != nil {
 		return nil, errors.Wrap(
 			err,
 			"UpdateMany - BSON Convert Error for update-argument",
 		)
 	}
-	filterDoc, err := toBSON(filter)
+	filterDoc, err := bson.Marshal(filter)
 	if err != nil {
 		return nil, errors.Wrap(
 			err,
@@ -308,7 +310,7 @@ func (c *Collection) Aggregate(pipeline interface{}) ([]interface{}, error) {
 	curCtx, curCancel := newTimeoutContext(c.Connection.Timeout)
 	for cur.Next(curCtx) {
 		item := map[string]interface{}{}
-		err := cur.Decode(item)
+		err := cur.Decode(&item)
 		if err != nil {
 			curCancel()
 			return nil, errors.Wrap(err, "Aggregate - Cursor Decode Error")

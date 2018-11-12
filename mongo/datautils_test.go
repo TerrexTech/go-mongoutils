@@ -5,8 +5,6 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/mongodb/mongo-go-driver/bson/objectid"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -55,45 +53,6 @@ var _ = Describe("MongoUtils", func() {
 				}(ctx)
 				Expect(<-strChan).To(Equal("response"))
 			})
-		})
-	})
-
-	Describe("toBSON", func() {
-		It("should exclude _id field if its not set", func() {
-			type test struct {
-				ID  objectid.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
-				Num int32             `bson:"num" json:"num"`
-				Str string            `bson:"str" json:"str"`
-			}
-
-			t := &test{
-				Num: 1,
-				Str: "test",
-			}
-			doc, err := toBSON(t)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(doc.Lookup("_id")).To(BeNil())
-			Expect(doc.Lookup("str").StringValue()).To(Equal(t.Str))
-			Expect(doc.Lookup("num").Int32()).To(Equal(t.Num))
-		})
-
-		It("should exclude _id field if its set", func() {
-			type test struct {
-				ID  objectid.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
-				Num int32             `bson:"num" json:"num"`
-				Str string            `bson:"str" json:"str"`
-			}
-
-			t := &test{
-				ID:  objectid.New(),
-				Num: 1,
-				Str: "test",
-			}
-			doc, err := toBSON(t)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(doc.Lookup("_id").ObjectID()).To(Equal(t.ID))
-			Expect(doc.Lookup("str").StringValue()).To(Equal(t.Str))
-			Expect(doc.Lookup("num").Int32()).To(Equal(t.Num))
 		})
 	})
 
