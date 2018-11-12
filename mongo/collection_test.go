@@ -343,7 +343,7 @@ var _ = Describe("MongoCollection", func() {
 
 		It("should find any documents that match the pointer filter", func() {
 			// map[string]string test
-			results, err := c.Find(&map[string]string{
+			results, err := c.Find(map[string]string{
 				"word": "some-word",
 			})
 			Expect(err).ToNot(HaveOccurred())

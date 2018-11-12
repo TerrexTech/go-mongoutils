@@ -2,20 +2,12 @@
 
 
 [[projects]]
-  digest = "1:dcade65c88d17fe1841540f1f1f841941cf11f153a26fad02451f263a71490f1"
+  digest = "1:9e040726ee775fa241bf96d3c11533a5312d9bcb00a594b63679bff456a4522c"
   name = "github.com/TerrexTech/go-commonutils"
   packages = ["commonutil"]
   pruneopts = "UT"
-  revision = "bec34e895c0ef90d7b0452f141691767356ae6e4"
-  version = "v3.0.0"
-
-[[projects]]
-  branch = "master"
-  digest = "1:5e33f17a0345f8ff94763b128e790293c0d5b060d57a32aadfcc23fd51a619fa"
-  name = "github.com/buger/jsonparser"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "6acdf747ae99cad92d1e8134606008acaca71844"
+  revision = "3d09c974f936d001def7acafb178d99f317ee3a9"
+  version = "v3.1.0"
 
 [[projects]]
   digest = "1:586ea76dbd0374d6fb649a91d70d652b7fe0ccffb8910a77468e7702e7901f3d"
@@ -56,14 +48,16 @@
   version = "v1.3.0"
 
 [[projects]]
-  digest = "1:ca4fde30b33f3f8d39ddaa544308b4bdaac1c48f290d6d5148565ff0b03a7d80"
+  digest = "1:e3492bfc9acbe6e04b51fe36220f9aea8c919885632f0de55685db80c0029844"
   name = "github.com/mongodb/mongo-go-driver"
   packages = [
     "bson",
-    "bson/builder",
+    "bson/bsoncodec",
+    "bson/bsoncore",
+    "bson/bsonrw",
+    "bson/bsontype",
     "bson/decimal",
     "bson/elements",
-    "bson/internal/llbson",
     "bson/objectid",
     "bson/parser",
     "bson/parser/ast",
@@ -91,6 +85,7 @@
     "internal",
     "mongo",
     "mongo/aggregateopt",
+    "mongo/bulkwriteopt",
     "mongo/changestreamopt",
     "mongo/clientopt",
     "mongo/collectionopt",
@@ -112,8 +107,8 @@
     "mongo/updateopt",
   ]
   pruneopts = "UT"
-  revision = "e9228a40a480a5403b7256fb755ab000ff754c35"
-  version = "v0.0.14"
+  revision = "8db96a607cde2fea156d9a72c26aa09271592591"
+  version = "v0.0.17"
 
 [[projects]]
   digest = "1:42e29deef12327a69123b9cb2cb45fee4af5c12c2a23c6e477338279a052703f"
@@ -193,36 +188,35 @@
   name = "golang.org/x/crypto"
   packages = ["pbkdf2"]
   pruneopts = "UT"
-  revision = "0e37d006457bf46f9e6692014ba72ef82c33022c"
+  revision = "e4dc69e5b2fd71dcaf8bd5d054eb936deb78d1fa"
 
 [[projects]]
   branch = "master"
-  digest = "1:908ac65130b45626b3724705bbb8183a785054fb9b7284c93803918bb81e813b"
+  digest = "1:5193d913046443e59093d66a97a40c51f4a5ea4ceba60f3b3ecf89694de5d16f"
   name = "golang.org/x/net"
   packages = [
-    "context",
     "html",
     "html/atom",
     "html/charset",
   ]
   pruneopts = "UT"
-  revision = "2f5d2388922f370f4355f327fcf4cfe9f5583908"
+  revision = "03003ca0c849e57b6ea29a4bab8d3cb6e4d568fe"
 
 [[projects]]
   branch = "master"
-  digest = "1:e0140c0c868c6e0f01c0380865194592c011fe521d6e12d78bfd33e756fe018a"
+  digest = "1:5e4d81c50cffcb124b899e4f3eabec3930c73532f0096c27f94476728ba03028"
   name = "golang.org/x/sync"
   packages = ["semaphore"]
   pruneopts = "UT"
-  revision = "1d60e4601c6fd243af51cc01ddf169918a5407ca"
+  revision = "42b317875d0fa942474b76e1b46a6060d720ae6e"
 
 [[projects]]
   branch = "master"
-  digest = "1:6c54cefa33de85c47075aae30f1d1a333967c405272010bb76aa943467e4cbae"
+  digest = "1:7ba061af4131fb44b30448572acd0d6fefbf63a61b97b7ef1dea0be5871c2742"
   name = "golang.org/x/sys"
   packages = ["unix"]
   pruneopts = "UT"
-  revision = "d47a0f3392421c5624713c9a19fe781f651f8a50"
+  revision = "66b7b1311ac80bbafcd2daeef9a5e6e2cd1e2399"
 
 [[projects]]
   digest = "1:4392fcf42d5cf0e3ff78c96b2acf8223d49e4fdc53eb77c99d2f8dfe4680e006"
